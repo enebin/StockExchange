@@ -1,27 +1,63 @@
+import os
 import pandas as pd
 import pandas_datareader.data as web
 import matplotlib.pyplot as plt
 
-# Get KOSPI & KOSDAQ's stocks info.
-print("Data downloading...")
-stock_data = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download', header=0)[0]
-print("done")
+
+# Current directory path
+cur_path = os.path.dirname(os.path.realpath(__file__))
+
+print('==== Automatic MA-graph Drawer ====\n')
+
+
+# Get KOSPI & KOSDAQ's stocks info. Only need to run it once
+'''
+def getStockCode(market):
+    if market == 'kosdaq':
+        url_market = 'kosdaqMkt'
+    elif market == 'kospi':
+        url_market = 'stockMkt'
+    else:
+        print('invalid market ')
+        return
+    url = 'http://kind.krx.co.kr/corpgeneral/corpList.do?method=download&searchType=13&marketType=%s' % url_market
+
+    print(market + "'s data downloading...")
+    _stock_data = pd.read_html(url, header=0)[0]
+    print("done")
+
+    return _stock_data
+
+
+stock_csv_kdq = getStockCode('kosdaq')
+stock_csv_ksp = getStockCode('kospi')
+
+stock_csv_kdq.to_csv(cur_path + '_kosdaq.csv', encoding='utf-8-sig')
+stock_csv_ksp.to_csv(cur_path + '_kospi.csv', encoding='utf-8-sig')
+'''
 
 # If you want to see how it looks like, uncomment below.
-#print(stock_data.head(10), stock_data.info())
+# print(stock_data.head(10), stock_data.info())
 
-while True:
-    try:
-        name = input("Name is?\n")
-        stock_code = stock_data[stock_data["회사명"] == name]["종목코드"].tolist()[0]
-    except:
-        print("Wrong input. Type again.")
-        continue
-    break
-
+stock_data_kdq = pd.read_csv(cur_path + '_kosdaq.csv')
+stock_data_ksp = pd.read_csv(cur_path + '_kospi.csv')
 
 # If you want to see the actual stock code, uncomment below.
-# print(stock_code, end='\n')
+# print(stock_data_kdq.info(), end='\n')
+
+while True:
+    name = input("Name is?\n")
+    is_kdq = stock_data_kdq['회사명'].isin([name]).any()
+    is_ksp = stock_data_ksp['회사명'].isin([name]).any()
+
+    if is_kdq:
+        stock_code = stock_data_kdq[stock_data_kdq["회사명"] == name]["종목코드"].tolist()[0]
+        break
+    elif is_ksp:
+        stock_code = stock_data_ksp[stock_data_ksp["회사명"] == name]["종목코드"].tolist()[0]
+        break
+    else:
+        print("Wrong input. Try again!")
 
 start = input("From when? 'YYYY-MM-DD'\n(If input is 0, start point is 2017-01-01)\n")
 
@@ -29,8 +65,11 @@ start = input("From when? 'YYYY-MM-DD'\n(If input is 0, start point is 2017-01-0
 if start == '0':
     start = "2017-01-01"
 
-# Data's form should be like '001234.KS'
-stock_code_mod = str(stock_code).zfill(6) + ".KS"
+# Data's form should be like KOSPI:'001234.KS', KOSDAQ:'001234.KQ'
+if is_kdq:
+    stock_code_mod = str(stock_code).zfill(6) + ".KQ"
+elif is_ksp:
+    stock_code_mod = str(stock_code).zfill(6) + ".KS"
 print("Code : " + stock_code_mod)
 
 # Get Stock Data from Yahoo between start point and today
