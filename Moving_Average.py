@@ -10,7 +10,9 @@ cur_path = os.path.dirname(os.path.realpath(__file__))
 print('==== Automatic MA-graph Drawer ====\n')
 
 
-# Get KOSPI & KOSDAQ's stocks info. Only need to run it once
+# Get KOSPI & KOSDAQ's stocks info.
+# If you haven't executed it before, you must do it once.
+# ------------------------------------------------------------
 '''
 def getStockCode(market):
     if market == 'kosdaq':
@@ -35,8 +37,9 @@ stock_csv_ksp = getStockCode('kospi')
 stock_csv_kdq.to_csv(cur_path + '_kosdaq.csv', encoding='utf-8-sig')
 stock_csv_ksp.to_csv(cur_path + '_kospi.csv', encoding='utf-8-sig')
 '''
+# ------------------------------------------------------------
 
-# If you want to see how it looks like, uncomment below.
+# If you want to see how the data look like, uncomment below.
 # print(stock_data.head(10), stock_data.info())
 
 stock_data_kdq = pd.read_csv(cur_path + '_kosdaq.csv')
@@ -45,6 +48,7 @@ stock_data_ksp = pd.read_csv(cur_path + '_kospi.csv')
 # If you want to see the actual stock code, uncomment below.
 # print(stock_data_kdq.info(), end='\n')
 
+# Find input from stock data.
 while True:
     name = input("Name is?\n")
     is_kdq = stock_data_kdq['회사명'].isin([name]).any()
@@ -59,18 +63,21 @@ while True:
     else:
         print("Wrong input. Try again!")
 
-start = input("From when? 'YYYY-MM-DD'\n(If input is 0, start point is 2017-01-01)\n")
-
-# If input is 0, start point becomes 2017-01-01
-if start == '0':
-    start = "2017-01-01"
-
 # Data's form should be like KOSPI:'001234.KS', KOSDAQ:'001234.KQ'
 if is_kdq:
     stock_code_mod = str(stock_code).zfill(6) + ".KQ"
 elif is_ksp:
     stock_code_mod = str(stock_code).zfill(6) + ".KS"
 print("Code : " + stock_code_mod)
+
+
+# Get start date from input
+start = input("From when? 'YYYY-MM-DD'\n(If input is 0, start point is 2017-01-01)\n")
+
+# If input is 0, start point becomes 2017-01-01
+if start == '0':
+    start = "2017-01-01"
+
 
 # Get Stock Data from Yahoo between start point and today
 gs = web.DataReader(stock_code_mod, "yahoo", start)
@@ -91,7 +98,7 @@ new_gs.insert(len(new_gs.columns), "MA120", ma120)
 
 
 # Plot
-plt.plot(new_gs.index, new_gs['Adj Close'], label='Adj Close')
+plt.plot(new_gs.index, new_gs['Adj Close'], label='Adj Price')
 plt.plot(new_gs.index, new_gs['MA5'], label='MA5')
 plt.plot(new_gs.index, new_gs['MA20'], label='MA20')
 plt.plot(new_gs.index, new_gs['MA60'], label='MA60')
