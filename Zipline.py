@@ -56,8 +56,10 @@ class TestStrategy(bt.Strategy):
             self.pastMA5 = MA5
             self.pastMA20 = MA20
 
+start = datetime.datetime(2019,6,1)
+
 #1
-stockData = web.DataReader('AAPL','yahoo',datetime.datetime(2018,6,1))[['Open','Close']]
+stockData = web.DataReader('AAPL','yahoo', start,)[['Open','Close']]
 
 #2
 cerebro = bt.Cerebro()

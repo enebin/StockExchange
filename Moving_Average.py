@@ -3,12 +3,10 @@ import pandas as pd
 import pandas_datareader.data as web
 import matplotlib.pyplot as plt
 
-
 # Current directory path
 cur_path = os.path.dirname(os.path.realpath(__file__))
 
 print('==== Automatic MA-graph Drawer ====\n')
-
 
 # Get KOSPI & KOSDAQ's stocks info.
 # If you haven't executed it before, you must do it once.
@@ -49,8 +47,17 @@ stock_data_ksp = pd.read_csv(cur_path + '_kospi.csv')
 # print(stock_data_kdq.info(), end='\n')
 
 # Find input from stock data.
+is_kdq = 0
+is_ksp = 0
+is_nq = 0
+
 while True:
-    name = input("Name is?\n")
+    name = input("Name is?\nType NASDAQ if want to search NASDAQ\n")
+    if name == 'NASDAQ':
+        name2 = input("Name of NASDAQ is?\nEx) AAPL, MSFT\n")
+        is_nq = 1
+        break
+
     is_kdq = stock_data_kdq['회사명'].isin([name]).any()
     is_ksp = stock_data_ksp['회사명'].isin([name]).any()
 
@@ -68,8 +75,9 @@ if is_kdq:
     stock_code_mod = str(stock_code).zfill(6) + ".KQ"
 elif is_ksp:
     stock_code_mod = str(stock_code).zfill(6) + ".KS"
+elif is_nq:
+    stock_code_mod = name2
 print("Code : " + stock_code_mod)
-
 
 # Get start date from input
 start = input("From when? 'YYYY-MM-DD'\n(If input is 0, start point is 2017-01-01)\n")
@@ -77,7 +85,6 @@ start = input("From when? 'YYYY-MM-DD'\n(If input is 0, start point is 2017-01-0
 # If input is 0, start point becomes 2017-01-01
 if start == '0':
     start = "2017-01-01"
-
 
 # Get Stock Data from Yahoo between start point and today
 gs = web.DataReader(stock_code_mod, "yahoo", start)
@@ -89,13 +96,11 @@ ma20 = new_gs['Adj Close'].rolling(window=20).mean()
 ma60 = new_gs['Adj Close'].rolling(window=60).mean()
 ma120 = new_gs['Adj Close'].rolling(window=120).mean()
 
-
 # Insert columns
 new_gs.insert(len(new_gs.columns), "MA5", ma5)
 new_gs.insert(len(new_gs.columns), "MA20", ma20)
 new_gs.insert(len(new_gs.columns), "MA60", ma60)
 new_gs.insert(len(new_gs.columns), "MA120", ma120)
-
 
 # Plot
 plt.plot(new_gs.index, new_gs['Adj Close'], label='Adj Price')
@@ -103,7 +108,6 @@ plt.plot(new_gs.index, new_gs['MA5'], label='MA5')
 plt.plot(new_gs.index, new_gs['MA20'], label='MA20')
 plt.plot(new_gs.index, new_gs['MA60'], label='MA60')
 plt.plot(new_gs.index, new_gs['MA120'], label='MA120')
-
 
 plt.legend(loc="best")
 plt.grid()
