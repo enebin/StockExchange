@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QAxContainer import *
 from PyQt5.QtCore import *
 
+
 class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
@@ -33,10 +34,19 @@ class Kiwoom(QAxWidget):
         code_list = code_list.split(';')
         return code_list[:-1]
 
+    def get_master_code_name(self, code):
+        code_name = self.dynamicCall("GetMasterCodeName(QString)", code)
+        return code_name
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     kiwoom = Kiwoom()
     kiwoom.comm_connect()
     code_list = kiwoom.get_code_list_by_market('10')
+    name = kiwoom.get_master_code_name('005380')
+
     for code in code_list:
         print(code, end=" ")
+
+    print('\n' + name)
