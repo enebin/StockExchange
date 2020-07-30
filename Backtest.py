@@ -80,3 +80,4 @@ cerebro.run()
 print('Final portfolio value : {}'.format(cerebro.broker.getvalue()))
 
 cerebro.plot(volume=False)
+cerebro
