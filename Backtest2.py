@@ -19,7 +19,7 @@ class SmaCross(bt.Strategy):
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
         print("====It's result of %d-MA and %d-MA(SMA)====" % (self.p.pfast, self.p.pslow))
         # print("====Just Hold====\n")
-
+        print('Starting portfolio Value : {}$\n'.format(start_val))
 
     def next(self):
         if not self.position:  # not in the market
@@ -103,7 +103,7 @@ cerebro = bt.Cerebro()  # create a "Cerebro" engine instance
 
 # Create a data feed
 start = '2018-01-01'
-name = '005380.KS'
+name = 'AAPL'
 stockData = web.DataReader(name, 'yahoo', start,)[['Open','Close']]
 data = bt.feeds.PandasData(dataname=stockData, open='Open', close='Close')
 
@@ -118,7 +118,6 @@ cerebro.broker.setcommission(commission=0.001)
 cerebro.addobserver(bt.observers.BuySell)
 
 start_val = cerebro.broker.getvalue()
-print('Starting portfolio Value : {}$\n'.format(start_val))
 cerebro.run()
 end_val = cerebro.broker.getvalue()
 print('Final portfolio value    : {}$\n'.format(round(end_val, 2)))
