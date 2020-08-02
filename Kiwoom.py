@@ -26,6 +26,8 @@ class Kiwoom(QAxWidget):
         else:
             print("disconnected")
 
+        self.send_order(“RQ_1”, “0101”, “5015123410”, 1, “000660”, 10, 0, “03”, “”)
+
         self.login_event_loop.exit()
 
     def get_code_list_by_market(self, market):
@@ -33,10 +35,17 @@ class Kiwoom(QAxWidget):
         code_list = code_list.split(';')
         return code_list[:-1]
 
+    def send_order(self, rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no):
+        self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                         [rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no])
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     kiwoom = Kiwoom()
     kiwoom.comm_connect()
-    code_list = kiwoom.get_code_list_by_market('10')
+    code_list = kiwoom.get_code_list_by_market('0')
     for code in code_list:
         print(code, end=" ")
+
+    print('\n')
+    print(len(code_list))
