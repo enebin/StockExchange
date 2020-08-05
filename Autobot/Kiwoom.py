@@ -115,6 +115,11 @@ if __name__ == "__main__":
     hoga = "03"     # 시장가
     order_no = ""
 
-    kiwoom.send_order(rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no)
+    # kiwoom.send_order(rqname, screen_no, acc_no, order_type, code, quantity, price, hoga, order_no)
 
-    #opw00018
+    CODES = kiwoom.get_code_list_by_market("0")
+
+    sys.stdout = open('../Crawl/KOSPI.txt', 'w')
+    print(CODES)
+
+    # opw00018
