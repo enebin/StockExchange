@@ -1,0 +1,32 @@
+# coding = utf-8
+import pandas as pd
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
+code = "005380"
+
+url = "https://finance.naver.com/item/main.nhn?code=" + code
+
+result = urlopen(url)
+html = result.read()
+
+soup = BeautifulSoup(html, 'html.parser')
+
+NAME = soup.find("div", {"class":"wrap_company"}).find("h2").text
+
+table_tag = soup.find("table", {"class":"per_table"})
+value_tag = table_tag.find_all("em")
+
+values = [NAME]
+for i in value_tag:
+    values.append(float(i.text.replace(',', '')))
+
+
+print(values)
+
+measurements = pd.DataFrame(columns=("NAME", "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+measurements.loc[0] = values
+
+measurements.to_csv('measurements.csv', encoding='utf-8-sig')
+
+
