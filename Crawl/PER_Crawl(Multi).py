@@ -50,7 +50,7 @@ def get_data(input_code):
         return name, price, values_raw
 
     except AttributeError:
-        print(bcolors.ERRMSG + "ERROR OCCURS" + bcolors.ITALIC + "\nPossible Error: It can be ETF")
+        print(bcolors.ERRMSG + "ERROR OCCURS" + bcolors.ITALIC + "\nPossible Error: It can be ETF, REITs...")
         return -1, -1, [-1]
     
 
@@ -71,10 +71,10 @@ def save_data(name, input_code, price, values_raw):
     data = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
     data.loc[0] = values
 
-    return data
-
     # 진행상황을 체크하며 값을 확인합니다.
-    # print(temp.tail(1))
+    # print(data.tail(1))
+
+    return data
 
 
 # 쓰레딩을 위해 사용하는 스타트 함수입니다.
@@ -86,9 +86,6 @@ def starter(input_code, Glob):
     else:
         temp_row = save_data(name, input_code, price, value_tag)
         Glob.df = Glob.df.append(temp_row)
-
-    # 진행상황을 체크하며 값을 확인합니다.
-    # print(Glob.df.head(10))
 
 
 # ========아래로 메인 코드입니다========= #
@@ -109,8 +106,7 @@ if __name__ == '__main__':
 
     # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
     # Multiprocessing 을 위한 전처리도 같이 합니다.
-
-    numberOfThreads = 8    # 프로세스의 개수
+    numberOfThreads = 8    # 프로세스의 개수 (MAX = 8)
 
     # 8개의 데이터프레임을 만들어줍니다.
     manager = mp.Manager()
@@ -140,7 +136,7 @@ if __name__ == '__main__':
         processes.append(process)
 
     print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
-    print(bcolors.WAITMSG + "Starting now. " + bcolors.ITALIC + "FYI: ETFs are excluded" + bcolors.ENDC)
+    print(bcolors.WAITMSG + "Starting now. " + bcolors.ITALIC + "FYI: Only stocks are included" + bcolors.ENDC)
 
     for i in chunks(processes, numberOfThreads):
         for j in i:
@@ -152,8 +148,7 @@ if __name__ == '__main__':
         count = 0
         for Glob in Globs:
             count += Glob.df.shape[0]
-        tqdm(total=892).update(count)
-
+        tqdm(total=len(CODES)).update(count)
 
         # for Glob in Globs:
         #     print(Glob.df.tail(1), end='\n')

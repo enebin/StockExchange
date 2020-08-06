@@ -1,2 +1,2 @@
 def none():
-    None
+    return None
