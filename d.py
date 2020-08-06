@@ -3,8 +3,6 @@ import requests
 from bs4 import BeautifulSoup as bs
 import time
 
-from multiprocessing import Pool # Pool import하기
-
 
 def get_links(): # 블로그의 게시글 링크들을 가져옵니다.
     req = requests.get('https://beomi.github.io/beomi.github.io_old/')
@@ -30,6 +28,7 @@ def get_content(link):
 
 if __name__=='__main__':
     start_time = time.time()
-    pool = Pool(processes=4) # 4개의 프로세스를 사용합니다.
-    pool.map(get_content, get_links()) # get_contetn 함수를 넣어줍시다.
+    for link in get_links():
+        get_content(link)
     print("--- %s seconds ---" % (time.time() - start_time))
+
