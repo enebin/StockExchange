@@ -68,6 +68,7 @@ print("======ANALYSIS STARTS=======")
 # 종목 코드 리스트를 가져옵니다.
 with open('KOSPI.txt', 'r') as f:
     CODES = f.readlines()
+f.close()
 
 CODES[0] = CODES[0].replace(" \'", "")
 CODES[0] = CODES[0].replace("\'", "")
