@@ -17,7 +17,7 @@ class SmaCross(bt.Strategy):
         sma1 = bt.ind.SMA(period=self.p.pfast)  # fast moving average
         sma2 = bt.ind.SMA(period=self.p.pslow)  # slow moving average
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
-        print("====It's result of %d-MA and %d-MA(SMA)====" % (self.p.pfast, self.p.pslow))
+        print("====It's result of %d-MA and %d-MA(SMA)====\n" % (self.p.pfast, self.p.pslow))
         # print("====Just Hold====\n")
         print('Starting portfolio Value : {}$\n'.format(start_val))
 
@@ -111,7 +111,7 @@ cerebro.adddata(data)  # Add the data feed
 
 strategies = [SmaCross, EmaCross, WmaCross]
 
-cerebro.addstrategy(strategies[2], pfast=5, pslow=10)  # Add the trading strategy
+cerebro.addstrategy(strategies[1], pfast=5, pslow=10)  # Add the trading strategy
 
 cerebro.broker.setcash(10000000.0)
 cerebro.broker.setcommission(commission=0.001)
