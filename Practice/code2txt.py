@@ -14,5 +14,5 @@ for code in stock_data_ksp["종목코드"]:
 for code in stock_data_kdq["종목코드"]:
     listz.append(str(code).zfill(6))
 
-sys.stdout = open('Crawl/kosdaq.txt', 'w')
+sys.stdout = open('kosdaq.txt', 'w')
 print(listz)

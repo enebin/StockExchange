@@ -50,7 +50,8 @@ def get_data(input_code):
         return name, price, values_raw
 
     except AttributeError:
-        return -1
+        print(bcolors.ERRMSG + "ERROR OCCURS" + bcolors.ITALIC + "\nPossible Error: It can be ETF")
+        return -1, -1, [-1]
     
 
 # get_data 에서 크롤링한 데이터를 받아 데이터프레임에 저장하는 함수입니다.
@@ -76,13 +77,15 @@ def save_data(name, input_code, price, values_raw):
     # print(temp.tail(1))
 
 
-# 쓰레딩을 위해 사용하는 스타팅 함수입니다.
+# 쓰레딩을 위해 사용하는 스타트 함수입니다.
 def starter(input_code, Glob):
-    if get_data(input_code) == -1:
+    name, price, value_tag = get_data(input_code)
+
+    if name == -1:
         return
     else:
-        name, price, value_tag = get_data(input_code)
-        Glob.df = Glob.df.append(save_data(name, input_code, price, value_tag))
+        temp_row = save_data(name, input_code, price, value_tag)
+        Glob.df = Glob.df.append(temp_row)
 
     # 진행상황을 체크하며 값을 확인합니다.
     # print(Glob.df.head(10))
@@ -91,6 +94,7 @@ def starter(input_code, Glob):
 # ========아래로 메인 코드입니다========= #
 if __name__ == '__main__':
     print("======ANALYSIS STARTS=======")
+    start_time = time.time()
 
     # 종목 코드 리스트를 가져온 후 전처리합니다.
     with open('KOSPI.txt', 'r') as f:
@@ -105,36 +109,64 @@ if __name__ == '__main__':
 
     # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
     # Multiprocessing 을 위한 전처리도 같이 합니다.
-    manager = mp.Manager()
-    Global = manager.Namespace()
-    measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
-    Global.df = measurements
 
-    # 멀티 프로세스는 속도 향상을 위해 필요합니다. 10개의 프로세스를 사용해 속도를 4배로 끌어 올립니다.
+    numberOfThreads = 8    # 프로세스의 개수
+
+    # 8개의 데이터프레임을 만들어줍니다.
+    manager = mp.Manager()
+    Global1 = manager.Namespace()
+    Global2 = manager.Namespace()
+    Global3 = manager.Namespace()
+    Global4 = manager.Namespace()
+    Global5 = manager.Namespace()
+    Global6 = manager.Namespace()
+    Global7 = manager.Namespace()
+    Global8 = manager.Namespace()
+
+    Globs = [Global1, Global2, Global3, Global4, Global5, Global6, Global7, Global8]
+    measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS", "E_PER",
+                                         "E_EPS", "PBR", "BPS", "ITR"))
+    for Glob in Globs:
+        Glob.df = measurements
+
+    # 멀티 프로세스는 속도 향상을 위해 필요합니다. 8개의 프로세스를 사용해 속도를 8배로 끌어 올립니다.
     # 프로세스 개수는 성능 여유분에 따라 조절 가능합니다.
     processes = []
-    numberOfThreads = 5    # 프로세스의 개수 (조절가능)
+    index = 0
 
     for code in tqdm(CODES, desc="Processing"):
-        process = mp.Process(target=starter, args=(str(code), Global))
+        process = mp.Process(target=starter, args=(str(code), Globs[index]))
+        index = (index + 1) % numberOfThreads
         processes.append(process)
 
-    print(bcolors.OKMSG + "Done Succesfully" + bcolors.ENDC)
-    print(bcolors.WAITMSG + "Now Starting. " + bcolors.ITALIC + "FYI: ETFs are excluded" + bcolors.ENDC)
+    print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
+    print(bcolors.WAITMSG + "Starting now. " + bcolors.ITALIC + "FYI: ETFs are excluded" + bcolors.ENDC)
 
     for i in chunks(processes, numberOfThreads):
         for j in i:
             j.start()
         for j in i:
-            time.sleep(0.01)
             j.join()
 
         # 진행상황을 체크하며 값을 확인합니다.
-        tqdm(total=891).update(Global.df.shape[0])
+        count = 0
+        for Glob in Globs:
+            count += Glob.df.shape[0]
+        tqdm(total=892).update(count)
+
+
+        # for Glob in Globs:
+        #     print(Glob.df.tail(1), end='\n')
 
     # 프로그램이 끝났다면 CSV 파일로 저장한 후 종료합니다.
-    measurements.to_csv('measurements_MULTI.csv', encoding='utf-8-sig')
+    ex_time = time.time() - start_time
+    result = measurements
+    for Glob in Globs:
+        result = result.append(Glob.df)
 
+    print("\n")
+    print(bcolors.HELP + "↓ Information about results is here ↓" + bcolors.ENDC)
+    print(result.info())
+    print(bcolors.OKMSG + "Finished! It took %.2fs." % round(ex_time, 2) + bcolors.ENDC)
 
-
-
+    result.to_csv('measurements_MULTI.csv', encoding='utf-8-sig')

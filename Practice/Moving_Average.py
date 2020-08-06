@@ -43,6 +43,7 @@ stock_csv_ksp.to_csv(cur_path + '_kospi.csv', encoding='utf-8-sig')
 stock_data_kdq = pd.read_csv(cur_path + '_kosdaq.csv')
 stock_data_ksp = pd.read_csv(cur_path + '_kospi.csv')
 
+
 # If you want to see the actual stock code, uncomment below.
 # print(stock_data_kdq.info(), end='\n')
 
