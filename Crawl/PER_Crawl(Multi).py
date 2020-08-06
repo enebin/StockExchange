@@ -50,7 +50,7 @@ def get_data(input_code):
         return name, price, values_raw
 
     except AttributeError:
-        print(bcolors.ERRMSG + "ERROR OCCURS" + bcolors.ITALIC + "\nPossible Error: It can be ETF, REITs...")
+        print(bcolors.ERRMSG + "ERROR OCCURS" + bcolors.ITALIC + "\nPossible Error: It can be ETF, REITs, etc...")
         return -1, -1, [-1]
     
 
