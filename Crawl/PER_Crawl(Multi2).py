@@ -53,7 +53,7 @@ class PERMulti:
 
     # 종목 코드 리스트를 가져온 후 전처리합니다.
     def _get_code_list(self, market):
-        print(bcolors.WAITMSG + "Analysis for " + market + " starts now!" + bcolors.ENDC)
+        print(bcolors.WAITMSG + "Data colloection for " + market + " starts now!" + bcolors.ENDC)
 
         with open(market + '.txt', 'r') as f:
             self.code_list = f.readlines()
@@ -168,7 +168,7 @@ class PERMulti:
 
         print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
         print(bcolors.OKMSG + "Number of processes: " + str(numberOfThreads) + bcolors.ENDC)
-        print(bcolors.WAITMSG + "Starting now. " + bcolors.ITALIC + "FYI: Only stocks are included" + bcolors.ENDC)
+        print(bcolors.WAITMSG + "Analysis starts now. " + bcolors.ITALIC + "FYI: Only stocks are included" + bcolors.ENDC)
 
         for i in chunks(processes, numberOfThreads):
             for j in i:
@@ -192,10 +192,11 @@ class PERMulti:
 if __name__ == '__main__':
     start_time = time.time()
 
-    pm = PERMulti(market='KOSDAQ')
+    pm = PERMulti(market='KOSPI')
     pm.multiprocess(numberOfThreads=8)
 
     ex_time = time.time() - start_time
+
     print(bcolors.OKMSG + "It took %dm %.2fs." % (ex_time / 60, round(ex_time, 2) % 60) + bcolors.ENDC)
 
 
