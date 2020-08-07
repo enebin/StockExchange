@@ -192,10 +192,11 @@ if __name__ == '__main__':
     start_time = time.time()
 
     pm = PERMulti(market='KOSPI')
-    pm.multiprocess(numberOfThreads=8)
+    pm.multiprocess(numberOfThreads=18)
 
     ex_time = time.time() - start_time
 
+    print('\n')
     print(bcolors.OKMSG + "It took %dm %.2fs." % (ex_time / 60, round(ex_time, 2) % 60) + bcolors.ENDC)
 
 
