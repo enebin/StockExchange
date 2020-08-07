@@ -128,10 +128,10 @@ class PERMulti:
         print(result.info())
 
         number_of_error = len(self.code_list) - result.shape[0]
-        print(bcolors.OKMSG + "Finished! %d items were collected. except for %d errors"
+        print(bcolors.OKMSG + "Finished! %d items were collected, except for %d errors"
               % (result.shape[0], number_of_error))
 
-        result.to_csv('DATA_' + self.market + datetime.today().strftime("%Y.%m.%d(%H:%M:%S)") +
+        result.to_csv('DATA_' + self.market + datetime.today().strftime("_%Y%m%d") +
                       '.csv', encoding='utf-8-sig')
 
     # 쓰레딩을 위해 사용하는 스타트 함수입니다.
@@ -145,7 +145,7 @@ class PERMulti:
             temp_row = self._save_data(name, input_code, price, value_tag)
             glob.df = glob.df.append(temp_row)
 
-    def multiprocess(self, numberOfThreads=12):
+    def multiprocess(self, numberOfThreads=8):
         # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
         # Multiprocessing 을 위한 전처리도 같이 합니다.
         # 프로세스의 개수 (MAX = 12)
@@ -167,7 +167,7 @@ class PERMulti:
             processes.append(process)
 
         print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
-        print(bcolors.HELP + bcolors.BOLD + "Number of processes: " + str(numberOfThreads) + bcolors.ENDC)
+        print(bcolors.OKMSG + "Number of processes: " + str(numberOfThreads) + bcolors.ENDC)
         print(bcolors.WAITMSG + "Starting now. " + bcolors.ITALIC + "FYI: Only stocks are included" + bcolors.ENDC)
 
         for i in chunks(processes, numberOfThreads):
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     pm = PERMulti(market='KOSDAQ')
-    pm.multiprocess(numberOfThreads=12)
+    pm.multiprocess(numberOfThreads=8)
 
     ex_time = time.time() - start_time
     print(bcolors.OKMSG + "It took %dm %.2fs." % (ex_time / 60, round(ex_time, 2) % 60) + bcolors.ENDC)
