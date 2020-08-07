@@ -150,8 +150,7 @@ class PERMulti:
         # Multiprocessing 을 위한 전처리도 같이 합니다.
         # 프로세스의 개수 (MAX = 12)
         if numberOfThreads > 12:
-            print(bcolors.ERRMSG + "Too much process. It will be adjusted to 12")
-            numberOfThreads = 12
+            print(bcolors.ERRMSG + "Too much process. Check number of threads again")
             return
 
         for glob in self.globs:
