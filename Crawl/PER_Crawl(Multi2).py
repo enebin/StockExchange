@@ -132,7 +132,7 @@ class PERMulti:
               % (result.shape[0], number_of_error))
 
         result.to_csv('DATA_' + self.market + datetime.today().strftime("_%Y%m%d") +
-                      '.csv', encoding='utf-8-sig')
+                      '.csv', encoding='utf-8-sig', index=False)
 
     # 쓰레딩을 위해 사용하는 스타트 함수입니다.
     def _starter(self, input_code, glob):
@@ -191,8 +191,8 @@ class PERMulti:
 if __name__ == '__main__':
     start_time = time.time()
 
-    pm = PERMulti(market='KOSPI')
-    pm.multiprocess(numberOfThreads=18)
+    pm = PERMulti(market='test')
+    pm.multiprocess(numberOfThreads=4)
 
     ex_time = time.time() - start_time
 
