@@ -27,6 +27,7 @@ def chunks(input_list, size):
 class PERMulti:
     def __init__(self, market='KOSPI', m_type='noBank'):
         self.market = market
+        self.m_type = m_type
         self.code_list = []
         self._get_code_list(market, m_type)
         self.measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS",
@@ -56,9 +57,9 @@ class PERMulti:
         print(bcolors.WAITMSG + "Data processing for " + market + '_' + m_type + " starts now!" + bcolors.ENDC)
 
         df = pd.read_csv(market + '_' + m_type + '.csv')
-        df.종목코드 = df.종목코드.map('{:06d}'.format)
+        df.CODE = df.CODE.map('{:06d}'.format)
 
-        self.code_list = df.종목코드.tolist()
+        self.code_list = df.CODE.tolist()
 
     # 종목코드를 받아 웹크롤링합니다.
     def _get_data(self, input_code):
@@ -119,6 +120,9 @@ class PERMulti:
         for glob in self.globs:
             result = result.append(glob.df)
 
+        # result = result.sort_values(["CODE"], ascending=True)
+
+        # 결과 데이터와 에러상태에 관한 간략한 정보를 보여줍니다.
         print("\n")
         print(bcolors.HELP + "↓ Information about results is here ↓" + bcolors.ENDC)
         print(result.info())
@@ -127,10 +131,21 @@ class PERMulti:
         print(bcolors.OKMSG + "Finished! %d items were collected, except for %d errors"
               % (result.shape[0], number_of_error))
 
-        result.to_csv('DATA_' + self.market + datetime.today().strftime("_%Y%m%d") +
+        # 결과데이터를 csv 로 출력하기 위한 과정입니다.
+        print(bcolors.WAITMSG + "Now processing output... " + bcolors.ENDC)
+        result.drop(['NAME'], axis='columns', inplace=True)
+
+        original_df = pd.read_csv(self.market + '_' + self.m_type + '.csv')
+        original_df.CODE = original_df.CODE.map('{:06d}'.format)
+
+        result = pd.merge(original_df, result, on='CODE')
+
+        result.to_csv('DATA_' + self.market + '_' + self.m_type + datetime.today().strftime("_%Y%m%d") +
                       '.csv', encoding='utf-8-sig', index=False)
 
-    # 쓰레딩을 위해 사용하는 스타트 함수입니다.
+        print(bcolors.OKMSG + "Done Successfully!" + bcolors.ENDC)
+
+        # 쓰레딩을 위해 사용하는 스타트 함수입니다.
     def _starter(self, input_code, glob):
         name, price, value_tag = self._get_data(input_code)
 
@@ -187,8 +202,11 @@ class PERMulti:
 if __name__ == '__main__':
     start_time = time.time()
 
-    pm = PERMulti(market='KOSPI')
-    pm.multiprocess(numberOfThreads=4)
+    # market은 'KOSPI', 'KOSDAQ'중 하나를 선택합니다. 선택하지 않을 시 기본값은 'KOSPI'입니다.
+    # m_type은 'noBank'(지주회사, 리츠, 은행 등 금융회사 제외), 'noUse'(제외된 요소만), 'ALL'(모두 다 포함)
+    # 중 하나를 선택합니다. 선택하지 않을 시 기본값은 'noBank'입니다.
+    pm = PERMulti(market='TEST', m_type='noBank')
+    pm.multiprocess(numberOfThreads=8)
 
     ex_time = time.time() - start_time
 
