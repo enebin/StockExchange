@@ -29,10 +29,9 @@ class PERMulti:
         self.market = market
         self.m_type = m_type
         self.code_list = []
-        self._get_code_list(market, m_type)
+
         self.measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS",
                                                   "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
-
         # 8개의 데이터프레임을 만들어줍니다.
         manager = mp.Manager()
         self.global1 = manager.Namespace()
@@ -56,7 +55,7 @@ class PERMulti:
     def _get_code_list(self, market, m_type):
         print(bcolors.WAITMSG + "Data processing for " + market + '_' + m_type + " starts now!" + bcolors.ENDC)
 
-        df = pd.read_csv(market + '_' + m_type + '.csv')
+        df = pd.read_csv('./DATA/' + market + '_' + m_type + '.csv')
         df.CODE = df.CODE.map('{:06d}'.format)
 
         self.code_list = df.CODE.tolist()
@@ -140,7 +139,7 @@ class PERMulti:
 
         result = pd.merge(original_df, result, on='CODE')
 
-        result.to_csv('DATA_' + self.market + '_' + self.m_type + datetime.today().strftime("_%Y%m%d") +
+        result.to_csv('./DATA/DATA_' + self.market + '_' + self.m_type + datetime.today().strftime("_%Y%m%d") +
                       '.csv', encoding='utf-8-sig', index=False)
 
         print(bcolors.OKMSG + "Done Successfully!" + bcolors.ENDC)
@@ -201,14 +200,17 @@ class PERMulti:
 if __name__ == '__main__':
     start_time = time.time()
 
-    # market은 'KOSPI', 'KOSDAQ'중 하나를 선택합니다. 선택하지 않을 시 기본값은 'KOSPI'입니다.
+    # market은 'KOSPI', 'KOSDAQ'중 하나를 선택합니다.
+    # 선택하지 않을 시 기본값은 'KOSPI'입니다.
     # m_type은 'noBank'(지주회사, 리츠, 은행 등 금융회사 제외), 'noUse'(noBank에서 제외된 요소만), 'ALL'(제외 없이 모두 다 포함)-
     # -중 하나를 선택합니다. 선택하지 않을 시 기본값은 'noBank'입니다.
-    pm = PERMulti(market='KOSPI', m_type='noBank')
+    pm1 = PERMulti(market='KOSPI', m_type='noBank')
+    pm2 = PERMulti(market='KOSDAQ', m_type='noBank')
 
     # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
     # 기본값은 8입니다.
-    pm.multiprocess(numberOfThreads=8)
+    pm1.multiprocess(numberOfThreads=8)
+    pm2.multiprocess(numberOfThreads=8)
 
     ex_time = time.time() - start_time
 
