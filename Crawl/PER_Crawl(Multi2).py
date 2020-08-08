@@ -205,7 +205,7 @@ if __name__ == '__main__':
     # market은 'KOSPI', 'KOSDAQ'중 하나를 선택합니다. 선택하지 않을 시 기본값은 'KOSPI'입니다.
     # m_type은 'noBank'(지주회사, 리츠, 은행 등 금융회사 제외), 'noUse'(제외된 요소만), 'ALL'(모두 다 포함)
     # 중 하나를 선택합니다. 선택하지 않을 시 기본값은 'noBank'입니다.
-    pm = PERMulti(market='TEST', m_type='noBank')
+    pm = PERMulti(market='KOSPI', m_type='noBank')
     pm.multiprocess(numberOfThreads=8)
 
     ex_time = time.time() - start_time
