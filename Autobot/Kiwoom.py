@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     CODES = kiwoom.get_code_list_by_market("0")
 
-    sys.stdout = open('../Crawl/KOSPI.txt', 'w')
+    sys.stdout = open('../KOSPI.txt', 'w')
     print(CODES)
 
     # opw00018

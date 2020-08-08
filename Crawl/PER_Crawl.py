@@ -20,7 +20,7 @@ def remove_coma(_input):
 print("======ANALYSIS STARTS=======")
 
 # 종목 코드 리스트를 가져옵니다.
-with open('KOSPI.txt', 'r') as f:
+with open('../KOSPI.txt', 'r') as f:
     CODES = f.readlines()
 f.close()
 

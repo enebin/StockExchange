@@ -25,10 +25,10 @@ def chunks(input_list, size):
 
 
 class PERMulti:
-    def __init__(self, market='KOSPI'):
+    def __init__(self, market='KOSPI', m_type='noBank'):
         self.market = market
         self.code_list = []
-        self._get_code_list(market)
+        self._get_code_list(market, m_type)
         self.measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS",
                                                   "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
 
@@ -52,17 +52,13 @@ class PERMulti:
                       self.global9, self.global10, self.global11, self.global12]
 
     # 종목 코드 리스트를 가져온 후 전처리합니다.
-    def _get_code_list(self, market):
-        print(bcolors.WAITMSG + "Data colloection for " + market + " starts now!" + bcolors.ENDC)
+    def _get_code_list(self, market, m_type):
+        print(bcolors.WAITMSG + "Data processing for " + market + '_' + m_type + " starts now!" + bcolors.ENDC)
 
-        with open(market + '.txt', 'r') as f:
-            self.code_list = f.readlines()
+        df = pd.read_csv(market + '_' + m_type + '.csv')
+        df.종목코드 = df.종목코드.map('{:06d}'.format)
 
-        self.code_list[0] = self.code_list[0].replace(" \'", "")
-        self.code_list[0] = self.code_list[0].replace("\'", "")
-        self.code_list[0] = self.code_list[0].replace("\' ", "")
-
-        self.code_list = self.code_list[0].split(',')
+        self.code_list = df.종목코드.tolist()
 
     # 종목코드를 받아 웹크롤링합니다.
     def _get_data(self, input_code):
@@ -191,7 +187,7 @@ class PERMulti:
 if __name__ == '__main__':
     start_time = time.time()
 
-    pm = PERMulti(market='test')
+    pm = PERMulti(market='KOSPI')
     pm.multiprocess(numberOfThreads=4)
 
     ex_time = time.time() - start_time

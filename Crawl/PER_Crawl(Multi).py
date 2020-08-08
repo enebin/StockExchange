@@ -93,7 +93,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     # 종목 코드 리스트를 가져온 후 전처리합니다.
-    with open('KOSPI.txt', 'r') as f:
+    with open('../KOSPI.txt', 'r') as f:
         CODES = f.readlines()
     f.close()
 
