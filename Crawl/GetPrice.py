@@ -51,23 +51,25 @@ def remove_coma(input_no):
 stocks = pd.read_csv("./DATA/KOSPI_noBank.csv")
 stocks_codes = stocks.CODE
 
-test = ['005380', '066570']
-res = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
 
-for index in tqdm(range(len(test))):
-    trial = 1
-    code = stocks_codes[index]
-    code = str(code).zfill(6)
-    cur_price, prev_price = get_price(code, trial)
+def save_price(stocks_codes):
+    test = ['005380', '066570']
+    res = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
 
-    res.loc[index, 'CODE'] = code
-    res.loc[index, 'CUR PRICE'] = cur_price
-    res.loc[index, 'PREV PRICE'] = prev_price
-    res.loc[index, 'FR'] = float(get_FR(cur_price, prev_price))
+    for index in tqdm(range(len(test))):
+        trial = 1
+        code = stocks_codes[index]
+        code = str(code).zfill(6)
+        cur_price, prev_price = get_price(code, trial)
 
-    time.sleep(0.3)
+        res.loc[index, 'CODE'] = code
+        res.loc[index, 'CUR PRICE'] = cur_price
+        res.loc[index, 'PREV PRICE'] = prev_price
+        res.loc[index, 'FR'] = float(get_FR(cur_price, prev_price))
 
-print(res.head(10))
+        time.sleep(0.3)
+
+    print(res.head(10))
 
 
 
