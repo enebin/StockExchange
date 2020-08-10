@@ -14,6 +14,7 @@ def get_price(code, try_cnt):
         print(code)
         url = "http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng?code={}".format(code)
         req = urlopen(url)
+        print("url")
         result = req.read()
 
         xmlsoup = BeautifulSoup(result, "lxml-xml")

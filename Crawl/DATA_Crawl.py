@@ -59,14 +59,10 @@ class PERMulti:
         self.global6 = manager.Namespace()
         self.global7 = manager.Namespace()
         self.global8 = manager.Namespace()
-        self.global9 = manager.Namespace()
-        self.global10 = manager.Namespace()
-        self.global11 = manager.Namespace()
-        self.global12 = manager.Namespace()
+
 
         self.globs = [self.global1, self.global2, self.global3, self.global4,
-                      self.global5, self.global6, self.global7, self.global8,
-                      self.global9, self.global10, self.global11, self.global12]
+                      self.global5, self.global6, self.global7, self.global8,]
 
     # 종목 코드 리스트를 가져온 후 전처리합니다. init 함수에서 클래스 생성과 함께 실행됩니다.
     def _get_code_list(self, market, m_type):
@@ -79,7 +75,8 @@ class PERMulti:
 
     # 종목코드 하나를 받아 주가를 받아옵니다. [현재가, 전일종가]를 반환합니다.
     def _get_price(self, code, try_cnt):
-        '''
+        print(code)
+
         if self.market == 'KOSPI':
             code_mod = code + '.KS'
         elif self.market == 'TEST':
@@ -95,8 +92,8 @@ class PERMulti:
             prevPrice = prices.Open.iloc[0]
         except KeyError:
             logging(code_mod)
-        '''
 
+        '''
         url = "http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng?code={}".format(code)
         req = urlopen(url)
         result = req.read()
@@ -107,11 +104,14 @@ class PERMulti:
 
         curPrice = remove_coma(curPrice)
         prevPrice = remove_coma(prevPrice)
+        '''
 
         return curPrice, prevPrice
 
     # 종목코드 하나를 받아 투자지표를 크롤링합니다. [종목명, [투자지표]]를 반환합니다.
     def _get_data(self, input_code):
+        print(input_code)
+
         # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
         url = "https://finance.naver.com/item/main.nhn?code=" + input_code
 
@@ -300,8 +300,8 @@ if __name__ == '__main__':
     # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
     # 기본값은 8입니다.
 
-    pm_test = PERMulti(market='KOSPI', m_type='noBank', period='day')
-    pm_test.multiprocess(numberOfThreads=8)
+    pm_test = PERMulti(market='KOSPI', m_type='noBank', period='week')
+    pm_test.multiprocess(numberOfThreads=4)
 
     '''    
     pm1 = PERMulti(market='KOSPI', m_type='noBank', period='day')
