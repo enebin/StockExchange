@@ -72,9 +72,9 @@ class PERMulti:
         self.code_list = df.CODE.tolist()
 
     # 종목코드 하나를 받아 주가를 받아옵니다. [현재가, 전일종가]를 반환합니다.
-    def _get_price(self, code, try_cnt):
-        print(code)
-
+    def _get_price(self, input_code, try_cnt):
+        """
+        # 야후 파이낸스릉 이용한 방법. 없는 데이터가 너무 많다.
         if self.market == 'KOSPI':
             code_mod = code + '.KS'
         elif self.market == 'TEST':
@@ -90,9 +90,11 @@ class PERMulti:
             curPrice = prices.Close.iloc[0]
             prevPrice = prices.Open.iloc[0]
         except KeyError:
-            logging(code_mod)
+            print(code_mod)
+        """
 
-        '''
+        """
+        # KRX 한국 거래소를 이용한 방법. 빠를땐 광속이나 대부분 더럽게 느리다. 
         url = "http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng?code={}".format(code)
         req = urlopen(url)
         print("url opened")
@@ -103,7 +105,29 @@ class PERMulti:
 
         curPrice = remove_coma(curPrice)
         prevPrice = remove_coma(prevPrice)
-        '''
+        """
+
+        # 네이버 금융을 이용한 방법. 그나마 가장 안정적이고 준수하다.
+        # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
+        url = "https://finance.naver.com/item/main.nhn?code=" + input_code
+
+        # BS4를 이용한 HTML 소스 크롤링입니다.
+        url_result = urlopen(url)
+        html = url_result.read()
+        soup = BeautifulSoup(html, 'lxml')
+
+        try:
+            # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
+            curPrice = soup.find("p", {"class": "no_today"}).text
+            curPrice = remove_coma(curPrice.split('\n')[2])
+
+            prevPrice = soup.find("td", {"class": "first"}).text
+            prevPrice = remove_coma(prevPrice.split('\n')[3])
+
+        except AttributeError:
+            print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
+                  "Possible Error: It can be transaction suspension, delisting, etc...")
+
         return curPrice, prevPrice
 
     # 종목코드 하나를 받아 투자지표를 크롤링합니다. [종목명, [투자지표]]를 반환합니다.
@@ -296,7 +320,7 @@ if __name__ == '__main__':
     # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
     # 기본값은 8입니다.
 
-    pm_test = PERMulti(market='KOSPI', m_type='noBank', period='day')
+    pm_test = PERMulti(market='KOSPI', m_type='noBank', period='week')
     pm_test.multiprocess(numberOfThreads=4)
 
     '''    
