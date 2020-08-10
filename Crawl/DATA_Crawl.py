@@ -36,6 +36,25 @@ def get_FR(cur, prev):
     return fr
 
 
+# 쓰레딩을 위해 사용하는 스타트 함수입니다.
+def starter(self, input_code, glob):
+    if self.period == 'week':
+        name, value_tag = self._get_data(input_code)
+
+        # 에러상황(ETF, 리츠 등 펀드류 코드 경우)시 리턴합니다.
+        if name == -1:
+            logging.warning(input_code)
+            return
+        else:
+            temp_row = self._make_data_frame(name, input_code, value_tag)
+            glob.df = glob.df.append(temp_row)
+
+    if self.period == 'day':
+        curPrice, prevPrice = self._get_price(input_code, 1)
+        temp_row = self._make_price_frame(input_code, curPrice, prevPrice)
+        glob.df = glob.df.append(temp_row)
+
+
 class PERMulti:
     def __init__(self, market='KOSPI', m_type='noBank', period='day'):
         self.market = market
@@ -197,7 +216,7 @@ class PERMulti:
         # print(res.head())
 
         return res
-
+    '''
     # 쓰레딩을 위해 사용하는 스타트 함수입니다.
     def _starter(self, input_code, glob):
         if self.period == 'week':
@@ -215,6 +234,7 @@ class PERMulti:
             curPrice, prevPrice = self._get_price(input_code, 1)
             temp_row = self._make_price_frame(input_code, curPrice, prevPrice)
             glob.df = glob.df.append(temp_row)
+    '''
 
     # 프로그램이 끝났다면 CSV 파일로 저장한 후 종료합니다.
     def _merger(self):
@@ -276,7 +296,7 @@ class PERMulti:
         processes = []
         index = 0
         for code in tqdm(self.code_list, desc="Processing DATA"):
-            process = mp.Process(target=self._starter, args=(str(code), self.globs[index]))
+            process = mp.Process(target=starter, args=(self, str(code), self.globs[index]))
             index = (index + 1) % numberOfThreads
             processes.append(process)
 
@@ -287,6 +307,7 @@ class PERMulti:
 
         for i in chunks(processes, numberOfThreads):
             for j in i:
+                print(j)
                 j.start()
             for j in i:
                 j.join()
