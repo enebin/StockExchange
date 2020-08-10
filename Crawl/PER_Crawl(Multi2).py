@@ -30,6 +30,8 @@ class PERMulti:
         self.m_type = m_type
         self.code_list = []
 
+        self._get_code_list(market, m_type)
+
         self.measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS",
                                                   "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
         # 8개의 데이터프레임을 만들어줍니다.
@@ -134,7 +136,7 @@ class PERMulti:
         print(bcolors.WAITMSG + "Now processing output... " + bcolors.ENDC)
         result.drop(['NAME'], axis='columns', inplace=True)
 
-        original_df = pd.read_csv(self.market + '_' + self.m_type + '.csv')
+        original_df = pd.read_csv('./DATA/' + self.market + '_' + self.m_type + '.csv')
         original_df.CODE = original_df.CODE.map('{:06d}'.format)
 
         result = pd.merge(original_df, result, on='CODE')
@@ -145,6 +147,7 @@ class PERMulti:
         print(bcolors.OKMSG + "Done Successfully!" + bcolors.ENDC)
 
         # 쓰레딩을 위해 사용하는 스타트 함수입니다.
+
     def _starter(self, input_code, glob):
         name, price, value_tag = self._get_data(input_code)
 
