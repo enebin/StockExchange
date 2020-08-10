@@ -48,7 +48,6 @@ class PERMulti:
         self.measurements = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',  "PER", "EPS",
                                                   "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
 
-
         # 8개의 데이터프레임을 만들어줍니다. 각각의 프로세서가 사용할 데이터프레임입니다.
         manager = mp.Manager()
         self.global1 = manager.Namespace()
@@ -59,7 +58,6 @@ class PERMulti:
         self.global6 = manager.Namespace()
         self.global7 = manager.Namespace()
         self.global8 = manager.Namespace()
-
 
         self.globs = [self.global1, self.global2, self.global3, self.global4,
                       self.global5, self.global6, self.global7, self.global8,]
@@ -88,6 +86,7 @@ class PERMulti:
 
         try:
             prices = web.DataReader(code_mod, "yahoo", today)
+            print("url opened")
             curPrice = prices.Close.iloc[0]
             prevPrice = prices.Open.iloc[0]
         except KeyError:
@@ -96,8 +95,8 @@ class PERMulti:
         '''
         url = "http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng?code={}".format(code)
         req = urlopen(url)
+        print("url opened")
         result = req.read()
-
         xmlsoup = BeautifulSoup(result, "lxml-xml")
         curPrice = xmlsoup.find("TBL_StockInfo").attrs["CurJuka"]
         prevPrice = xmlsoup.find("TBL_StockInfo").attrs["PrevJuka"]
@@ -105,13 +104,10 @@ class PERMulti:
         curPrice = remove_coma(curPrice)
         prevPrice = remove_coma(prevPrice)
         '''
-
         return curPrice, prevPrice
 
     # 종목코드 하나를 받아 투자지표를 크롤링합니다. [종목명, [투자지표]]를 반환합니다.
     def _get_data(self, input_code):
-        print(input_code)
-
         # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
         url = "https://finance.naver.com/item/main.nhn?code=" + input_code
 
@@ -300,7 +296,7 @@ if __name__ == '__main__':
     # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
     # 기본값은 8입니다.
 
-    pm_test = PERMulti(market='KOSPI', m_type='noBank', period='week')
+    pm_test = PERMulti(market='KOSPI', m_type='noBank', period='day')
     pm_test.multiprocess(numberOfThreads=4)
 
     '''    
