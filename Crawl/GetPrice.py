@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 def get_price(code, try_cnt):
     try:
+        print(code)
         url = "http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng?code={}".format(code)
         req = urlopen(url)
         result = req.read()
@@ -22,6 +23,8 @@ def get_price(code, try_cnt):
 
         curPrice = remove_coma(curPrice)
         prevPrice = remove_coma(prevPrice)
+
+        time.sleep(0.3)
 
         return curPrice, prevPrice
 
@@ -51,25 +54,23 @@ def remove_coma(input_no):
 stocks = pd.read_csv("./DATA/KOSPI_noBank.csv")
 stocks_codes = stocks.CODE
 
+test = ['005380', '066570']
+res = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
 
-def save_price(stocks_codes):
-    test = ['005380', '066570']
-    res = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
+for index in tqdm(range(len(test))):
+    trial = 1
+    code = stocks_codes[index]
+    code = str(code).zfill(6)
+    cur_price, prev_price = get_price(code, trial)
 
-    for index in tqdm(range(len(test))):
-        trial = 1
-        code = stocks_codes[index]
-        code = str(code).zfill(6)
-        cur_price, prev_price = get_price(code, trial)
+    res.loc[index, 'CODE'] = code
+    res.loc[index, 'CUR PRICE'] = cur_price
+    res.loc[index, 'PREV PRICE'] = prev_price
+    res.loc[index, 'FR'] = float(get_FR(cur_price, prev_price))
 
-        res.loc[index, 'CODE'] = code
-        res.loc[index, 'CUR PRICE'] = cur_price
-        res.loc[index, 'PREV PRICE'] = prev_price
-        res.loc[index, 'FR'] = float(get_FR(cur_price, prev_price))
+    time.sleep(0.3)
 
-        time.sleep(0.3)
-
-    print(res.head(10))
+print(res.head(10))
 
 
 
