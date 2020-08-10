@@ -9,6 +9,7 @@ from tqdm import tqdm
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
+import os
 
 # 콤마를 숫자에서 지워주는 편의성을 위한 함수입니다. 반환값은 float 형 입니다.
 def remove_coma(input_no):
@@ -30,6 +31,8 @@ class PERMulti:
         self.m_type = m_type
 
         self.code_list = []
+        self._get_code_list(market, m_type)
+
         self._get_code_list(market, m_type)
 
         self.measurements = pd.DataFrame(columns=("NAME", "CODE", "PRICE", "PER", "EPS",
@@ -57,7 +60,7 @@ class PERMulti:
     def _get_code_list(self, market, m_type):
         print(bcolors.WAITMSG + "Data processing for " + market + '_' + m_type + " starts now!" + bcolors.ENDC)
 
-        df = pd.read_csv('./DATA/' + market + '_' + m_type + '.csv')
+        df = pd.read_csv('./DATA/' + market + '_' + m_type + '.csv', encoding='utf-8-sig')
         df.CODE = df.CODE.map('{:06d}'.format)
 
         self.code_list = df.CODE.tolist()
@@ -179,7 +182,8 @@ class PERMulti:
 
         print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
         print(bcolors.OKMSG + "Number of processes: " + str(numberOfThreads) + bcolors.ENDC)
-        print(bcolors.WAITMSG + "Analysis starts now. " + bcolors.ITALIC + "FYI: Only stocks are included" + bcolors.ENDC)
+        print(bcolors.WAITMSG + "Analysis for " + self.market + '_' + self.m_type + " starts now. " +
+              bcolors.ITALIC + "FYI: Only stocks are included" + bcolors.ENDC)
 
         for i in chunks(processes, numberOfThreads):
             for j in i:

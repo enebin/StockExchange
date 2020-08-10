@@ -320,15 +320,20 @@ if __name__ == '__main__':
     # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
     # 기본값은 8입니다.
 
+    '''
     pm_test = PERMulti(market='KOSPI', m_type='noBank', period='week')
     pm_test.multiprocess(numberOfThreads=4)
-
-    '''    
-    pm1 = PERMulti(market='KOSPI', m_type='noBank', period='day')
-    pm2 = PERMulti(market='KOSDAQ', m_type='noBank', period='day')
-    pm1.multiprocess(numberOfThreads=4)
-    pm2.multiprocess(numberOfThreads=4)
     '''
+
+    pm1 = PERMulti(market='KOSPI', m_type='noBank', period='day')
+    pm2 = PERMulti(market='KOSPI', m_type='noBank', period='week')
+    pm3 = PERMulti(market='KOSDAQ', m_type='noBank', period='day')
+    pm4 = PERMulti(market='KOSDAQ', m_type='noBank', period='week')
+
+    pms = [pm1, pm2, pm3, pm4]
+
+    for p in pms:
+        p.multiprocess(numberOfThreads=8)
 
     ex_time = time.time() - start_time
 
