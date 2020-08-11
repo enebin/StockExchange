@@ -203,11 +203,6 @@ def merger(globs, market, m_type, code_list, period):
     for glob in globs:
         result = result.append(glob.df)
 
-    # result = result.sort_values(["CODE"], ascending=True)
-
-    # 결과 데이터와 에러상태에 관한 간략한 정보를 보여줍니다.
-    print("\n")
-
     print(bcolors.OKMSG + "Finished! %d items were collected, except for %d errors"
           % (result.shape[0], len(code_list) - result.shape[0]))
 
@@ -223,23 +218,24 @@ def merger(globs, market, m_type, code_list, period):
                  m_type + datetime.today().strftime("_%Y%m%d") + '.csv')
 
     if os.path.isfile(file_name):
-        object_df = pd.read_csv(file_name).astype(object)
+        object_df = pd.read_csv(file_name)
         if period == 'day':
-            result.iloc[:, 8:15] = object_df.iloc[:, 8:15]
+            result.iloc[:, 9:16] = object_df.iloc[:, 9:16]
         else:
-            result.iloc[:, 5:8] = object_df.iloc[:, 5:8]
+            result.iloc[:, 6:9] = object_df.iloc[:, 6:9]
     else:
         pass
 
+    result = result.fillna('N/A')
     print(bcolors.HELP + "↓ Information about results is here ↓" + bcolors.ENDC)
     print(result.info())
 
     result.to_csv(file_name, encoding='utf-8-sig', index=False)
     print(bcolors.OKMSG + "Done Successfully!" + bcolors.ENDC)
+    print('\n')
 
 
-def multiprocess(globs, period, numberOfThreads=8):
-    global code_list
+def multiprocess(globs, market, m_type, period, code_list, numberOfThreads=8):
     # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
     # Multiprocessing 을 위한 전처리도 같이 합니다.
     # 프로세스의 개수 (MAX = 18)
@@ -303,9 +299,14 @@ if __name__ == '__main__':
     period = 'day'
 
     unit = [['KOSPI', 'noBank', 'week'],
-            ['KOSDAQ', 'noBank', 'week'],
             ['KOSPI', 'noBank', 'day'],
+            ['KOSDAQ', 'noBank', 'week'],
             ['KOSDAQ', 'noBank', 'day']]
+
+    unit_test = [['TEST', 'noBank', 'week'],
+                 ['TEST', 'noBank', 'day'],
+                 ['TEST2', 'noBank', 'day'],
+                 ['TEST2', 'noBank', 'week']]
 
     for a in unit:
         # 12개의 데이터프레임을 만들어줍니다. 각각의 프로세서가 사용할 데이터프레임입니다.
@@ -343,12 +344,11 @@ if __name__ == '__main__':
         수집됩니다. 
         ==='''
 
-        code_list = []
         code_list = get_code_list(market=a[0], m_type=a[1])
 
         # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
         # 기본값은 8입니다.
-        multiprocess(globs, period=a[2], numberOfThreads=14)
+        multiprocess(globs, market=a[0], m_type=a[1], period=a[2], code_list=code_list, numberOfThreads=4)
 
         initialize(globs)
         initialize(code_list)
