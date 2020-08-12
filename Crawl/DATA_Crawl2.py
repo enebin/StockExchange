@@ -220,9 +220,11 @@ def merger(globs, market, m_type, code_list, period):
     if os.path.isfile(file_name):
         object_df = pd.read_csv(file_name)
         if period == 'day':
-            result.iloc[:, 9:16] = object_df.iloc[:, 9:16]
+            result.iloc[:, 10:16] = object_df.iloc[:, 10:16]
         else:
-            result.iloc[:, 6:9] = object_df.iloc[:, 6:9]
+            result.loc[:, 'CUR PRICE'] = object_df.loc[:, 'CUR PRICE']
+            result.loc[:, 'PREV PRICE'] = object_df.loc[:, 'PREV PRICE']
+
     else:
         pass
 
@@ -308,7 +310,7 @@ if __name__ == '__main__':
                  ['TEST2', 'noBank', 'day'],
                  ['TEST2', 'noBank', 'week']]
 
-    for a in unit:
+    for a in unit_test:
         # 12개의 데이터프레임을 만들어줍니다. 각각의 프로세서가 사용할 데이터프레임입니다.
         manager = mp.Manager()
         global1 = manager.Namespace()
