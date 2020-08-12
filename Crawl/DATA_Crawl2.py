@@ -36,10 +36,10 @@ def get_FR(cur, prev):
 
 
 # 종목 코드 리스트를 가져온 후 전처리합니다. init 함수에서 클래스 생성과 함께 실행됩니다.
-def get_code_list(market, m_type):
+def get_code_list(market, m_type, in_path):
     print(bcolors.WAITMSG + "Data processing for " + market + '_' + m_type + " starts now!" + bcolors.ENDC)
 
-    df = pd.read_csv('./DATA/' + market + '_' + m_type + '.csv')
+    df = pd.read_csv(in_path)
     df.CODE = df.CODE.map('{:06d}'.format)
 
     code_list = df.CODE.tolist()
@@ -60,13 +60,26 @@ def starter(input_code, glob, period):
             temp_row = make_data_frame(name, input_code, value_tag)
             glob.df = glob.df.append(temp_row)
 
-    if period == 'day':
-        curPrice, prevPrice = get_price(input_code, 1)
+    elif period == 'day':
+        curPrice, prevPrice = get_price(input_code)
         temp_row = make_price_frame(input_code, curPrice, prevPrice)
         glob.df = glob.df.append(temp_row)
 
+    elif period == 'all':
+        name, curPrice, prevPrice, value_tag = get_all(input_code)
+
+        # 에러상황(ETF, 리츠 등 펀드류 코드 경우)시 리턴합니다.
+        if name == -1:
+            logging.warning(input_code)
+            return
+        else:
+            temp_row = make_all_frame(name, input_code, curPrice, prevPrice, value_tag)
+            glob.df = glob.df.append(temp_row)
+
 
 # 종목코드 하나를 받아 투자지표를 크롤링합니다. [종목명, [투자지표]]를 반환합니다.
+
+
 def get_data(input_code):
     # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
     url = "https://finance.naver.com/item/main.nhn?code=" + input_code
@@ -90,11 +103,12 @@ def get_data(input_code):
     except AttributeError:
         print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
               "Possible Error: It can be ETF, REITs, etc...")
+        logging.warning(input_code)
         return -1, [-1]
 
 
 # 종목코드 하나를 받아 주가를 받아옵니다. [현재가, 전일종가]를 반환합니다.
-def get_price(input_code, try_cnt):
+def get_price(input_code, try_cnt=1):
     """
     # 야후 파이낸스릉 이용한 방법. 없는 데이터가 너무 많다.
     if market == 'KOSPI':
@@ -153,6 +167,41 @@ def get_price(input_code, try_cnt):
     return curPrice, prevPrice
 
 
+# 주가와 지표 모두 받아옵니다.
+def get_all(input_code):
+    # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
+    url = "https://finance.naver.com/item/main.nhn?code=" + input_code
+
+    # BS4를 이용한 HTML 소스 크롤링입니다.
+    url_result = urlopen(url)
+    html = url_result.read()
+    soup = BeautifulSoup(html, 'lxml')
+
+    # 잘못된 코드나 ETF를 솎아내기 위해 예외처리를 하였습니다.
+    try:
+        # HTML 소스에서 회사명을 찾아 저장합니다.
+        name = soup.find("div", {"class": "wrap_company"}).find("h2").text
+
+        # HTML 소스에서 투자지표 Table을 찾아 저장한 후 값을 추출합니다.
+        table_tag = soup.find("table", {"class": "per_table"})
+        values_raw = table_tag.find_all("em")
+
+        # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
+        curPrice = soup.find("p", {"class": "no_today"}).text
+        curPrice = remove_coma(curPrice.split('\n')[2])
+
+        prevPrice = soup.find("td", {"class": "first"}).text
+        prevPrice = remove_coma(prevPrice.split('\n')[3])
+
+        return name, curPrice, prevPrice, values_raw
+
+    except AttributeError:
+        print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
+              "Possible Error: It can be REITs, Transaction Suspension etc...")
+        logging.warning(input_code)
+        return -1, -1, -1, [-1]
+
+
 # get_data 에서 크롤링한 데이터를 받아 데이터프레임에 저장하는 함수입니다.
 # 데이터프레임을 반환합니다.
 def make_data_frame(name, input_code, values_raw):
@@ -171,7 +220,6 @@ def make_data_frame(name, input_code, values_raw):
 
     temp_data.loc[0, 'NAME'] = name
     temp_data.loc[0, 'CODE'] = input_code
-
     temp_data.loc[0, 'PER':"ITR"] = values
 
     # 진행상황을 체크하며 값을 확인합니다.
@@ -184,21 +232,49 @@ def make_data_frame(name, input_code, values_raw):
 # 종목코드를 받아 주식의 현재가, 전일 종가, 등락률을 저장하는 함수입니다.
 # 데이터프레임을 반환합니다.
 def make_price_frame(input_code, curPrice, prevPrice):
-    res = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
+    temp_data = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
 
-    res.loc[0, 'CODE'] = input_code
-    res.loc[0, 'CUR PRICE'] = curPrice
-    res.loc[0, 'PREV PRICE'] = prevPrice
-    res.loc[0, 'FR'] = float(get_FR(curPrice, prevPrice))
+    temp_data.loc[0, 'CODE'] = input_code
+    temp_data.loc[0, 'CUR PRICE'] = curPrice
+    temp_data.loc[0, 'PREV PRICE'] = prevPrice
+    temp_data.loc[0, 'FR'] = float(get_FR(curPrice, prevPrice))
 
     # 진행상황을 체크하며 값을 확인합니다.
     # print(res.head())
 
-    return res
+    return temp_data
+
+
+def make_all_frame(name, input_code, curPrice, prevPrice, values_raw):
+    # 크롤링으로 받은 HTML 소스(values_raw)에서 PER, PBR 등의 값을 추출합니다.
+    values = []
+    for i in values_raw:
+        content = i.text
+        if content == 'N/A':
+            values.append('N/A')
+        else:
+            values.append(remove_coma(content))
+
+    # 1줄짜리 임시 데이터프레임을 구성하여 데이터를 저장합니다.
+    temp_data = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',
+                                      "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+
+    temp_data.loc[0, 'NAME'] = name
+    temp_data.loc[0, 'CODE'] = input_code
+    temp_data.loc[0, 'PER':"ITR"] = values
+    temp_data.loc[0, 'CODE'] = input_code
+    temp_data.loc[0, 'CUR PRICE'] = curPrice
+    temp_data.loc[0, 'PREV PRICE'] = prevPrice
+
+    # 진행상황을 체크하며 값을 확인합니다.
+    # print(temp_data.tail(1))
+
+    # 데이터프레임을 반환합니다.
+    return temp_data
 
 
 # 프로그램이 끝났다면 CSV 파일로 저장한 후 종료합니다.
-def merger(globs, market, m_type, code_list, period):
+def merger(globs, code_list, period, in_path, out_path):
     result = measurements
     for glob in globs:
         result = result.append(glob.df)
@@ -210,21 +286,24 @@ def merger(globs, market, m_type, code_list, period):
     print(bcolors.WAITMSG + "Now processing output... " + bcolors.ENDC)
     result.drop(['NAME'], axis='columns', inplace=True)
 
-    original_df = pd.read_csv('./DATA/' + market + '_' + m_type + '.csv')
+    original_df = pd.read_csv(in_path)
     original_df.CODE = original_df.CODE.map('{:06d}'.format)
 
     result = pd.merge(original_df, result, on='CODE')
-    file_name = ('./DATA/Results/DATA_' + market + '_' +
-                 m_type + datetime.today().strftime("_%Y%m%d") + '.csv')
+    file_name = out_path
 
     if os.path.isfile(file_name):
         object_df = pd.read_csv(file_name)
+
         if period == 'day':
             result.iloc[:, 10:16] = object_df.iloc[:, 10:16]
-        else:
+        elif period == 'week':
             result.loc[:, 'CUR PRICE'] = object_df.loc[:, 'CUR PRICE']
             result.loc[:, 'PREV PRICE'] = object_df.loc[:, 'PREV PRICE']
-
+        elif period == 'all':
+            result.loc[:, 'PER':"ITR"] = object_df.loc[:, 'PER':"ITR"]
+            result.loc[:, 'CUR PRICE'] = object_df.loc[:, 'CUR PRICE']
+            result.loc[:, 'PREV PRICE'] = object_df.loc[:, 'PREV PRICE']
     else:
         pass
 
@@ -237,7 +316,7 @@ def merger(globs, market, m_type, code_list, period):
     print('\n')
 
 
-def multiprocess(globs, market, m_type, period, code_list, numberOfThreads=8):
+def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8):
     # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
     # Multiprocessing 을 위한 전처리도 같이 합니다.
     # 프로세스의 개수 (MAX = 18)
@@ -281,7 +360,7 @@ def multiprocess(globs, market, m_type, period, code_list, numberOfThreads=8):
         # for glob in globs:
         #     print(glob.df.tail(1), end='\n')
 
-    merger(globs, market, m_type, code_list, period)
+    merger(globs, code_list, period, in_path, out_path)
 
 
 def initialize(input_list):
@@ -296,21 +375,22 @@ if __name__ == '__main__':
     measurements = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR', "PER", "EPS",
                                          "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
 
-    market = 'KOSPI'
-    m_type = 'noBank'
-    period = 'day'
+    unit_all = [['KOSPI', 'noBank', 'all'],
+                ['KOSDAQ', 'noBank', 'all']]
 
-    unit = [['KOSPI', 'noBank', 'week'],
-            ['KOSPI', 'noBank', 'day'],
-            ['KOSDAQ', 'noBank', 'week'],
-            ['KOSDAQ', 'noBank', 'day']]
+    price_ks = [['KOSPI', 'noBank', 'day']]
 
-    unit_test = [['TEST', 'noBank', 'week'],
-                 ['TEST', 'noBank', 'day'],
-                 ['TEST2', 'noBank', 'day'],
-                 ['TEST2', 'noBank', 'week']]
+    unit_test = [['TEST', 'noBank', 'all'],
+                 ['TEST2', 'noBank', 'all']]
 
     for a in unit_test:
+        market = a[0]
+        m_type = a[1]
+        period = a[2]
+
+        in_path = './DATA/' + market + '_' + m_type + '.csv'
+        out_path = './DATA/Results/DATA_' + market + '_' + m_type + datetime.today().strftime("_%Y%m%d") + '.csv'
+
         # 12개의 데이터프레임을 만들어줍니다. 각각의 프로세서가 사용할 데이터프레임입니다.
         manager = mp.Manager()
         global1 = manager.Namespace()
@@ -325,16 +405,9 @@ if __name__ == '__main__':
         global10 = manager.Namespace()
         global11 = manager.Namespace()
         global12 = manager.Namespace()
-        global13 = manager.Namespace()
-        global14 = manager.Namespace()
-        global15 = manager.Namespace()
-        global16 = manager.Namespace()
-        global17 = manager.Namespace()
-        global18 = manager.Namespace()
 
         globs = [global1, global2, global3, global4, global5, global6,
-                 global7, global8, global9, global10, global11, global12,
-                 global13, global14, global15, global16, global17, global18]
+                 global7, global8, global9, global10, global11, global12]
 
         '''===
         market은 'KOSPI', 'KOSDAQ'중 하나를 선택합니다. 선택하지 않을 시 기본값은 'KOSPI'입니다.
@@ -346,11 +419,11 @@ if __name__ == '__main__':
         수집됩니다. 
         ==='''
 
-        code_list = get_code_list(market=a[0], m_type=a[1])
+        code_list = get_code_list(market=market, m_type=m_type, in_path=in_path)
 
         # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
         # 기본값은 8입니다.
-        multiprocess(globs, market=a[0], m_type=a[1], period=a[2], code_list=code_list, numberOfThreads=6)
+        multiprocess(globs, period=period, code_list=code_list, in_path=in_path, out_path=out_path, numberOfThreads=6)
 
         initialize(globs)
         initialize(code_list)
