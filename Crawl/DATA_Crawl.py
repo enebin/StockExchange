@@ -79,7 +79,7 @@ class PERMulti:
         self.global8 = manager.Namespace()
 
         self.globs = [self.global1, self.global2, self.global3, self.global4,
-                      self.global5, self.global6, self.global7, self.global8,]
+                      self.global5, self.global6, self.global7, self.global8]
 
     # 종목 코드 리스트를 가져온 후 전처리합니다. init 함수에서 클래스 생성과 함께 실행됩니다.
     def _get_code_list(self, market, m_type):

@@ -12,6 +12,7 @@ from tqdm import tqdm
 from urllib.request import urlopen
 from urllib.error import HTTPError
 from bs4 import BeautifulSoup
+from abc import ABCMeta, abstractmethod
 
 
 # 콤마를 숫자에서 지워주는 편의성을 위한 함수입니다. 반환값은 float 형 입니다.
@@ -28,23 +29,95 @@ def chunks(input_list, size):
         yield input_list[element: element + size]
 
 
-# 종목 등락률을 계산합니다.
-def get_FR(cur, prev):
-    fr = ((cur - prev) / prev) * 100
-    fr = round(fr, 2)
-    return fr
+# start -> get -> make -> merge
+
+class startBase(metaclass=ABCMeta):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def multiprocess(self):
+        pass
 
 
-# 종목 코드 리스트를 가져온 후 전처리합니다. init 함수에서 클래스 생성과 함께 실행됩니다.
-def get_code_list(market, m_type, in_path):
-    print(bcolors.WAITMSG + "Data processing for " + market + '_' + m_type + " starts now!" + bcolors.ENDC)
+class getBase(metaclass=ABCMeta):
+    def __init__(self, market, m_type):
+        self.market = market
+        self.m_type = m_type
+        self.code_list = []
 
-    df = pd.read_csv(in_path)
-    df.CODE = df.CODE.map('{:06d}'.format)
+    def get_code_list(self):
+        print(bcolors.WAITMSG + "Data processing for " + market + '_' +
+              m_type + " starts now!" + bcolors.ENDC)
 
-    code_list = df.CODE.tolist()
+        df = pd.read_csv(in_path)
+        df.CODE = df.CODE.map('{:06d}'.format)
 
-    return code_list
+        self.code_list = df.CODE.tolist()
+
+    @abstractmethod
+    def get_data(self):
+        pass
+
+    @abstractmethod
+    def get_price(self):
+        pass
+
+    @abstractmethod
+    def get_all(self):
+        pass
+
+
+class makeBase(metaclass=ABCMeta):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def make_data_frame(self):
+        pass
+
+
+class mergeBase(metaclass=ABCMeta):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def merge(self):
+        pass
+
+
+class get_all(getBase):
+    def __init__(self, market, m_type):
+        self.process = 'all'
+        super.__init__(market, m_type, code_list)
+        super().get_code_list()
+
+    def get_data(self, input_code):
+        input_code = self.code
+        # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
+        url = "https://finance.naver.com/item/main.nhn?code=" + input_code
+
+        # BS4를 이용한 HTML 소스 크롤링입니다.
+        url_result = urlopen(url)
+        html = url_result.read()
+        soup = BeautifulSoup(html, 'lxml')
+
+        # 잘못된 코드나 ETF를 솎아내기 위해 예외처리를 하였습니다.
+        try:
+            # HTML 소스에서 회사명을 찾아 저장합니다.
+            name = soup.find("div", {"class": "wrap_company"}).find("h2").text
+
+            # HTML 소스에서 투자지표 Table을 찾아 저장한 후 값을 추출합니다.
+            table_tag = soup.find("table", {"class": "per_table"})
+            values_raw = table_tag.find_all("em")
+
+            return name, values_raw
+
+        except AttributeError:
+            print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
+                  "Possible Error: It can be ETF, REITs, etc...")
+            logging.warning(input_code)
+            return -1, [-1]
 
 
 # 쓰레딩을 위해 사용하는 스타트 함수입니다.
@@ -77,34 +150,51 @@ def starter(input_code, glob, period):
             glob.df = glob.df.append(temp_row)
 
 
-# 종목코드 하나를 받아 투자지표를 크롤링합니다. [종목명, [투자지표]]를 반환합니다.
+def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8):
+    # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
+    # Multiprocessing 을 위한 전처리도 같이 합니다.
+    # 프로세스의 개수 (MAX = 18)
+    if numberOfThreads > 18:
+        print(bcolors.ERRMSG + "Too much process. Check number of threads again")
+        return
 
+    if period == 'week':
+        print(bcolors.OKMSG + "Processing type is: Investment index.")
+    else:
+        print(bcolors.OKMSG + "Processing type is: Price informations.")
 
-def get_data(input_code):
-    # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
-    url = "https://finance.naver.com/item/main.nhn?code=" + input_code
+    for glob in globs:
+        glob.df = measurements
 
-    # BS4를 이용한 HTML 소스 크롤링입니다.
-    url_result = urlopen(url)
-    html = url_result.read()
-    soup = BeautifulSoup(html, 'lxml')
+    # 데이터프레임을 프로세스 개수에 따라 분배하며 프로세스 개수는 성능 여유분에 따라 조절 가능합니다.
+    processes = []
+    index = 0
+    for code in tqdm(code_list, desc="Processing DATA"):
+        process = mp.Process(target=starter, args=(str(code), globs[index], str(period)))
+        index = (index + 1) % numberOfThreads
+        processes.append(process)
 
-    # 잘못된 코드나 ETF를 솎아내기 위해 예외처리를 하였습니다.
-    try:
-        # HTML 소스에서 회사명을 찾아 저장합니다.
-        name = soup.find("div", {"class": "wrap_company"}).find("h2").text
+    print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
+    print(bcolors.OKMSG + "Number of processes: " + str(numberOfThreads) + bcolors.ENDC)
+    print(bcolors.WAITMSG + "Analysis starts now. " + bcolors.ITALIC +
+          "FYI: Only stocks are included" + bcolors.ENDC)
 
-        # HTML 소스에서 투자지표 Table을 찾아 저장한 후 값을 추출합니다.
-        table_tag = soup.find("table", {"class": "per_table"})
-        values_raw = table_tag.find_all("em")
+    for i in chunks(processes, numberOfThreads):
+        for j in i:
+            j.start()
+        for j in i:
+            j.join()
 
-        return name, values_raw
+        # 진행상황을 체크하며 값을 확인합니다.
+        count = 0
+        for glob in globs:
+            count += glob.df.shape[0]
+        tqdm(total=len(code_list)).update(count)
 
-    except AttributeError:
-        print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
-              "Possible Error: It can be ETF, REITs, etc...")
-        logging.warning(input_code)
-        return -1, [-1]
+        # for glob in globs:
+        #     print(glob.df.tail(1), end='\n')
+
+    merger(globs, code_list, period, in_path, out_path)
 
 
 # 종목코드 하나를 받아 주가를 받아옵니다. [현재가, 전일종가]를 반환합니다.
@@ -315,51 +405,6 @@ def merger(globs, code_list, period, in_path, out_path):
     print('\n')
 
 
-def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8):
-    # 값들을 저장할 Pandas 데이터프레임을 구성합니다.
-    # Multiprocessing 을 위한 전처리도 같이 합니다.
-    # 프로세스의 개수 (MAX = 18)
-    if numberOfThreads > 18:
-        print(bcolors.ERRMSG + "Too much process. Check number of threads again")
-        return
-
-    if period == 'week':
-        print(bcolors.OKMSG + "Processing type is: Investment index.")
-    else:
-        print(bcolors.OKMSG + "Processing type is: Price informations.")
-
-    for glob in globs:
-        glob.df = measurements
-
-    # 데이터프레임을 프로세스 개수에 따라 분배하며 프로세스 개수는 성능 여유분에 따라 조절 가능합니다.
-    processes = []
-    index = 0
-    for code in tqdm(code_list, desc="Processing DATA"):
-        process = mp.Process(target=starter, args=(str(code), globs[index], str(period)))
-        index = (index + 1) % numberOfThreads
-        processes.append(process)
-
-    print(bcolors.OKMSG + "Done Successfully" + bcolors.ENDC)
-    print(bcolors.OKMSG + "Number of processes: " + str(numberOfThreads) + bcolors.ENDC)
-    print(bcolors.WAITMSG + "Analysis starts now. " + bcolors.ITALIC +
-          "FYI: Only stocks are included" + bcolors.ENDC)
-
-    for i in chunks(processes, numberOfThreads):
-        for j in i:
-            j.start()
-        for j in i:
-            j.join()
-
-        # 진행상황을 체크하며 값을 확인합니다.
-        count = 0
-        for glob in globs:
-            count += glob.df.shape[0]
-        tqdm(total=len(code_list)).update(count)
-
-        # for glob in globs:
-        #     print(glob.df.tail(1), end='\n')
-
-    merger(globs, code_list, period, in_path, out_path)
 
 
 def initialize(input_list):
@@ -410,10 +455,10 @@ if __name__ == '__main__':
 
         '''===
         market은 'KOSPI', 'KOSDAQ'중 하나를 선택합니다. 선택하지 않을 시 기본값은 'KOSPI'입니다.
-    
+
         m_type은 'noBank'(지주회사, 리츠, 은행 등 금융회사 제외), 'noUse'(noBank에서 제외된 요소만), 'ALL'(제외 없이 모두 다 포함)-
         -중 하나를 선택합니다. 선택하지 않을 시 기본값은 'noBank'입니다.
-    
+
         period 는 'day'와 'week' 중 하나를 선택합니다. 'day'를 선택할 경우 가격에 관한 정보가, 'week'을 선택할 경우 투자지표에 관한 정보가 
         수집됩니다. 
         ==='''
