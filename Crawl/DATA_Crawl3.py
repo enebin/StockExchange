@@ -29,95 +29,15 @@ def chunks(input_list, size):
         yield input_list[element: element + size]
 
 
-# start -> get -> make -> merge
+def get_code_list(market, m_type, in_path):
+    print(bcolors.WAITMSG + "Data processing for " + market + '_' +
+          m_type + " starts now!" + bcolors.ENDC)
 
-class startBase(metaclass=ABCMeta):
-    def __init__(self):
-        pass
+    df = pd.read_csv(in_path)
+    df.CODE = df.CODE.map('{:06d}'.format)
 
-    @abstractmethod
-    def multiprocess(self):
-        pass
-
-
-class getBase(metaclass=ABCMeta):
-    def __init__(self, market, m_type):
-        self.market = market
-        self.m_type = m_type
-        self.code_list = []
-
-    def get_code_list(self):
-        print(bcolors.WAITMSG + "Data processing for " + market + '_' +
-              m_type + " starts now!" + bcolors.ENDC)
-
-        df = pd.read_csv(in_path)
-        df.CODE = df.CODE.map('{:06d}'.format)
-
-        self.code_list = df.CODE.tolist()
-
-    @abstractmethod
-    def get_data(self):
-        pass
-
-    @abstractmethod
-    def get_price(self):
-        pass
-
-    @abstractmethod
-    def get_all(self):
-        pass
-
-
-class makeBase(metaclass=ABCMeta):
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def make_data_frame(self):
-        pass
-
-
-class mergeBase(metaclass=ABCMeta):
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def merge(self):
-        pass
-
-
-class get_all(getBase):
-    def __init__(self, market, m_type):
-        self.process = 'all'
-        super.__init__(market, m_type, code_list)
-        super().get_code_list()
-
-    def get_data(self, input_code):
-        input_code = self.code
-        # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
-        url = "https://finance.naver.com/item/main.nhn?code=" + input_code
-
-        # BS4를 이용한 HTML 소스 크롤링입니다.
-        url_result = urlopen(url)
-        html = url_result.read()
-        soup = BeautifulSoup(html, 'lxml')
-
-        # 잘못된 코드나 ETF를 솎아내기 위해 예외처리를 하였습니다.
-        try:
-            # HTML 소스에서 회사명을 찾아 저장합니다.
-            name = soup.find("div", {"class": "wrap_company"}).find("h2").text
-
-            # HTML 소스에서 투자지표 Table을 찾아 저장한 후 값을 추출합니다.
-            table_tag = soup.find("table", {"class": "per_table"})
-            values_raw = table_tag.find_all("em")
-
-            return name, values_raw
-
-        except AttributeError:
-            print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
-                  "Possible Error: It can be ETF, REITs, etc...")
-            logging.warning(input_code)
-            return -1, [-1]
+    code_list = df.CODE.tolist()
+    return code_list
 
 
 # 쓰레딩을 위해 사용하는 스타트 함수입니다.
@@ -197,142 +117,75 @@ def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8)
     merger(globs, code_list, period, in_path, out_path)
 
 
-# 종목코드 하나를 받아 주가를 받아옵니다. [현재가, 전일종가]를 반환합니다.
-def get_price(input_code, try_cnt=1):
-    """
-    # 야후 파이낸스릉 이용한 방법. 없는 데이터가 너무 많다.
-    if market == 'KOSPI':
-        code_mod = code + '.KS'
-    elif market == 'TEST':
-        code_mod = code + '.KS'
-    else:
-        code_mod = code + '.KQ'
+# start -> get -> make -> merge
 
-    today = datetime.today().strftime('%Y-%m-%d')
+class collectBase(metaclass=ABCMeta):
+    def __init__(self, code):
+        self.code = code
+        self.values = []
 
-    try:
-        prices = web.DataReader(code_mod, "yahoo", today)
-        print("url opened")
-        curPrice = prices.Close.iloc[0]
-        prevPrice = prices.Open.iloc[0]
-    except KeyError:
-        print(code_mod)
-    """
+    @abstractmethod
+    def collect_data(self):
+        pass
 
-    """
-    # KRX 한국 거래소를 이용한 방법. 빠를땐 광속이나 대부분 더럽게 느리다. 
-    url = "http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng?code={}".format(code)
-    req = urlopen(url)
-    print("url opened")
-    result = req.read()
-    xmlsoup = BeautifulSoup(result, "lxml-xml")
-    curPrice = xmlsoup.find("TBL_StockInfo").attrs["CurJuka"]
-    prevPrice = xmlsoup.find("TBL_StockInfo").attrs["PrevJuka"]
-
-    curPrice = remove_coma(curPrice)
-    prevPrice = remove_coma(prevPrice)
-    """
-
-    # 네이버 금융을 이용한 방법. 그나마 가장 안정적이고 준수하다.
-    # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
-    url = "https://finance.naver.com/item/main.nhn?code=" + input_code
-
-    # BS4를 이용한 HTML 소스 크롤링입니다.
-    url_result = urlopen(url)
-    html = url_result.read()
-    soup = BeautifulSoup(html, 'lxml')
-
-    try:
-        # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
-        curPrice = soup.find("p", {"class": "no_today"}).text
-        curPrice = remove_coma(curPrice.split('\n')[2])
-
-        prevPrice = soup.find("td", {"class": "first"}).text
-        prevPrice = remove_coma(prevPrice.split('\n')[3])
-
-    except AttributeError:
-        print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
-              "Possible Error: It can be transaction suspension, delisting, etc...")
-
-    return curPrice, prevPrice
+    @abstractmethod
+    def give_date(self):
+        pass
 
 
-# 주가와 지표 모두 받아옵니다.
-def get_all(input_code):
-    # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
-    url = "https://finance.naver.com/item/main.nhn?code=" + input_code
+class makeBase(metaclass=ABCMeta):
+    def __init__(self):
+        pass
 
-    # BS4를 이용한 HTML 소스 크롤링입니다.
-    url_result = urlopen(url)
-    html = url_result.read()
-    soup = BeautifulSoup(html, 'lxml')
-
-    # 잘못된 코드나 ETF를 솎아내기 위해 예외처리를 하였습니다.
-    try:
-        # HTML 소스에서 회사명을 찾아 저장합니다.
-        name = soup.find("div", {"class": "wrap_company"}).find("h2").text
-
-        # HTML 소스에서 투자지표 Table을 찾아 저장한 후 값을 추출합니다.
-        table_tag = soup.find("table", {"class": "per_table"})
-        values_raw = table_tag.find_all("em")
-
-        # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
-        curPrice = soup.find("p", {"class": "no_today"}).text
-        curPrice = remove_coma(curPrice.split('\n')[2])
-
-        prevPrice = soup.find("td", {"class": "first"}).text
-        prevPrice = remove_coma(prevPrice.split('\n')[3])
-
-        return name, curPrice, prevPrice, values_raw
-
-    except AttributeError:
-        print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
-              "Possible Error: It can be REITs, Transaction Suspension etc...")
-        logging.warning(input_code)
-        return -1, -1, -1, [-1]
+    @abstractmethod
+    def make_data_frame(self):
+        pass
 
 
-# get_data 에서 크롤링한 데이터를 받아 데이터프레임에 저장하는 함수입니다.
-# 데이터프레임을 반환합니다.
-def make_data_frame(name, input_code, values_raw):
-    # 크롤링으로 받은 HTML 소스(values_raw)에서 PER, PBR 등의 값을 추출합니다.
-    values = []
-    for i in values_raw:
-        content = i.text
-        if content == 'N/A':
-            values.append('N/A')
-        else:
-            values.append(remove_coma(content))
+class collectAll(collectBase):
+    def __init__(self, code):
+        super.__init__(code)
+        self.name = ''
+        self.curPrice = 0
+        self.prevPrice = 0
+        self.values_raw = []
 
-    # 1줄짜리 임시 데이터프레임을 구성하여 데이터를 저장합니다.
-    temp_data = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',
-                                      "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+    def collect_data(self):
+        input_code = self.code
 
-    temp_data.loc[0, 'NAME'] = name
-    temp_data.loc[0, 'CODE'] = input_code
-    temp_data.loc[0, 'PER':"ITR"] = values
+        # 종목코드를 가져와 NAVER 증권 정보 URL에 대입합니다.
+        url = "https://finance.naver.com/item/main.nhn?code=" + input_code
 
-    # 진행상황을 체크하며 값을 확인합니다.
-    # print(temp_data.tail(1))
+        # BS4를 이용한 HTML 소스 크롤링입니다.
+        url_result = urlopen(url)
+        html = url_result.read()
+        soup = BeautifulSoup(html, 'lxml')
 
-    # 데이터프레임을 반환합니다.
-    return temp_data
+        # 잘못된 코드나 ETF를 솎아내기 위해 예외처리를 하였습니다.
+        try:
+            # HTML 소스에서 회사명을 찾아 저장합니다.
+            self.name = soup.find("div", {"class": "wrap_company"}).find("h2").text
 
+            # HTML 소스에서 투자지표 Table을 찾아 저장한 후 값을 추출합니다.
+            table_tag = soup.find("table", {"class": "per_table"})
+            self.values_raw = table_tag.find_all("em")
 
-# 종목코드를 받아 주식의 현재가, 전일 종가, 등락률을 저장하는 함수입니다.
-# 데이터프레임을 반환합니다.
-def make_price_frame(input_code, curPrice, prevPrice):
-    temp_data = pd.DataFrame(columns=['CODE', 'CUR PRICE', 'PREV PRICE', 'FR'])
+            # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
+            curPrice = soup.find("p", {"class": "no_today"}).text
+            self.curPrice = remove_coma(curPrice.split('\n')[2])
 
-    temp_data.loc[0, 'CODE'] = input_code
-    temp_data.loc[0, 'CUR PRICE'] = curPrice
-    temp_data.loc[0, 'PREV PRICE'] = prevPrice
-    temp_data.loc[0, 'FR'] = float(get_FR(curPrice, prevPrice))
+            prevPrice = soup.find("td", {"class": "first"}).text
+            self.prevPrice = remove_coma(prevPrice.split('\n')[3])
 
-    # 진행상황을 체크하며 값을 확인합니다.
-    # print(res.head())
+        except AttributeError:
+            print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
+                  "Possible Error: It can be REITs, Transaction Suspension etc...")
+            logging.warning(input_code)
 
-    return temp_data
+            self.name = -1
+
+    def give_date(self):
+        return self.name, self.curPrice, self.prevPrice, self.values_raw
 
 
 def make_all_frame(name, input_code, curPrice, prevPrice, values_raw):
