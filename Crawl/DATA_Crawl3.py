@@ -119,10 +119,10 @@ def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8)
 
 # start -> get -> make -> merge
 
-class collectBase(metaclass=ABCMeta):
+class CollectBase(metaclass=ABCMeta):
     def __init__(self, code):
         self.code = code
-        self.values = []
+        self.values_raw = []
 
     @abstractmethod
     def collect_data(self):
@@ -133,22 +133,35 @@ class collectBase(metaclass=ABCMeta):
         pass
 
 
-class makeBase(metaclass=ABCMeta):
-    def __init__(self):
+class MakeBase(metaclass=ABCMeta):
+    def __init__(self, data_list):
+        self.data_list = data_list
+        self.temp_df = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',
+                                             "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+
+    def discriminator(self, send):
+        for content in self.data_list[]:
+            content = content.text
+            if content == 'N/A':
+                self.xx.append('N/A')
+            else:
+                self.xx.append(remove_coma(content))
+
+    @abstractmethod
+    def make_dataframe(self):
         pass
 
     @abstractmethod
-    def make_data_frame(self):
+    def give_dataframe(self):
         pass
 
 
-class collectAll(collectBase):
+class CollectAll(CollectBase):
     def __init__(self, code):
         super.__init__(code)
         self.name = ''
         self.curPrice = 0
         self.prevPrice = 0
-        self.values_raw = []
 
     def collect_data(self):
         input_code = self.code
@@ -178,41 +191,44 @@ class collectAll(collectBase):
             self.prevPrice = remove_coma(prevPrice.split('\n')[3])
 
         except AttributeError:
-            print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
-                  "Possible Error: It can be REITs, Transaction Suspension etc...")
+            print(
+                bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
+                "Possible Error: It can be REITs, Transaction Suspension etc..."
+            )
             logging.warning(input_code)
-
             self.name = -1
 
     def give_date(self):
-        return self.name, self.curPrice, self.prevPrice, self.values_raw
+        return [self.name, self.code, self.curPrice, self.prevPrice, self.values_raw]
 
 
-def make_all_frame(name, input_code, curPrice, prevPrice, values_raw):
-    # 크롤링으로 받은 HTML 소스(values_raw)에서 PER, PBR 등의 값을 추출합니다.
-    values = []
-    for i in values_raw:
-        content = i.text
-        if content == 'N/A':
-            values.append('N/A')
-        else:
-            values.append(remove_coma(content))
+class MakeFrameAll(MakeBase):
+    def __init__(self, data_list):
+        super().__init__(data_list)
 
-    # 1줄짜리 임시 데이터프레임을 구성하여 데이터를 저장합니다.
-    temp_data = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',
-                                      "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+    def make_dataframe(self):
+        # 크롤링으로 받은 HTML 소스(values_raw)에서 PER, PBR 등의 값을 추출합니다.
+        # 1줄짜리 임시 데이터프레임을 구성하여 데이터를 저장합니다.
+        data_list = self.data_list
 
-    temp_data.loc[0, 'NAME'] = name
-    temp_data.loc[0, 'CODE'] = input_code
-    temp_data.loc[0, 'PER':"ITR"] = values
-    temp_data.loc[0, 'CUR PRICE'] = curPrice
-    temp_data.loc[0, 'PREV PRICE'] = prevPrice
+        name = data_list[0]
+        input_code = data_list[1]
+        curPrice = data_list[2]
+        prevPrice = data_list[3]
+        values = data_list[4]
 
-    # 진행상황을 체크하며 값을 확인합니다.
-    # print(temp_data.tail(1))
+        self.temp_df.loc[0, 'NAME'] = name
+        self.temp_df.loc[0, 'CODE'] = input_code
+        self.temp_df.loc[0, 'CUR PRICE'] = curPrice
+        self.temp_df.loc[0, 'PREV PRICE'] = prevPrice
+        self.temp_df.loc[0, 'PER':"ITR"] = values
+
+        # 진행상황을 체크하며 값을 확인합니다.
+        # print(temp_data.tail(1))
 
     # 데이터프레임을 반환합니다.
-    return temp_data
+    def give_dataframe(self):
+        return self.temp_df
 
 
 # 프로그램이 끝났다면 CSV 파일로 저장한 후 종료합니다.
