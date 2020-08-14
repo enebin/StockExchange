@@ -3,14 +3,12 @@ import os.path
 import time
 import bcolors
 import pandas as pd
-import pandas_datareader.data as web
 import multiprocessing as mp
 import logging
 
 from datetime import datetime
 from tqdm import tqdm
 from urllib.request import urlopen
-from urllib.error import HTTPError
 from bs4 import BeautifulSoup
 from abc import ABCMeta, abstractmethod
 
@@ -41,7 +39,7 @@ def get_code_list(market, m_type, in_path):
 
 
 # 쓰레딩을 위해 사용하는 스타트 함수입니다.
-def starter(input_code, glob, period):
+def starter(input_code, table, period):
     if period == 'week':
         name, value_tag = get_data(input_code)
 
@@ -51,12 +49,12 @@ def starter(input_code, glob, period):
             return
         else:
             temp_row = make_data_frame(name, input_code, value_tag)
-            glob.df = glob.df.append(temp_row)
+            table.df = table.df.append(temp_row)
 
     elif period == 'day':
         curPrice, prevPrice = get_price(input_code)
         temp_row = make_price_frame(input_code, curPrice, prevPrice)
-        glob.df = glob.df.append(temp_row)
+        table.df = table.df.append(temp_row)
 
     elif period == 'all':
         name, curPrice, prevPrice, value_tag = get_all(input_code)
@@ -67,7 +65,7 @@ def starter(input_code, glob, period):
             return
         else:
             temp_row = make_all_frame(name, input_code, curPrice, prevPrice, value_tag)
-            glob.df = glob.df.append(temp_row)
+            table.df = table.df.append(temp_row)
 
 
 def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8):
@@ -118,6 +116,12 @@ def multiprocess(globs, period, code_list, in_path, out_path, numberOfThreads=8)
 
 
 # start -> get -> make -> merge
+
+class Command:
+    def __init__(self, code, table):
+
+
+
 
 class CollectBase(metaclass=ABCMeta):
     def __init__(self, code):
