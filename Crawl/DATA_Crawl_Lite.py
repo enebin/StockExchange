@@ -211,7 +211,7 @@ if __name__ == '__main__':
     unit_test = [['TEST', 'noBank', 'all'],
                  ['TEST2', 'noBank', 'all']]
 
-    for a in unit_test:
+    for a in price_ks:
         market = a[0]
         m_type = a[1]
 
@@ -250,7 +250,7 @@ if __name__ == '__main__':
 
         # 멀티 프로세스는 속도 향상을 위해 필요합니다. n개의 프로세스를 사용해 속도를 n배로 끌어 올립니다.
         # 기본값은 8입니다.
-        multiprocess(globs, code_list=code_list, in_path=in_path, out_path=out_path, numberOfThreads=6)
+        multiprocess(globs, code_list=code_list, in_path=in_path, out_path=out_path, numberOfThreads=8)
 
         initialize(globs)
         initialize(code_list)
