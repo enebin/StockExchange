@@ -45,14 +45,14 @@ def get_code_list(market, m_type, in_path):
 
 # 쓰레딩을 위해 사용하는 스타트 함수입니다.
 def starter(input_code, glob):
-    name, profit_list = get_all(input_code)
+    name, sect = get_all(input_code)
 
     # 에러상황(ETF, 리츠 등 펀드류 코드 경우)시 리턴합니다.
-    if name == -1:
+    if sect == -1:
         logging.warning(input_code)
         return
     else:
-        temp_row = make_all_frame(name, input_code, profit_list)
+        temp_row = make_all_frame(name, input_code, sect)
         glob.df = glob.df.append(temp_row)
 
 
@@ -70,32 +70,27 @@ def get_all(input_code):
     try:
         # 이름을 받아온다
         name = soup.find("div", {"class": "wrap_company"}).find("h2").text
-        
-        # 제무재표를 받아온다
-        financial_stmt = pd.read_html(html, encoding='euc-kr')[3]
-        financial_stmt.set_index(('주요재무정보', '주요재무정보', '주요재무정보'), inplace=True)
-        financial_stmt.index.rename('주요재무정보', inplace=True)
-        financial_stmt.columns = financial_stmt.columns.droplevel(2)
-        financial_stmt = financial_stmt.iloc[1, :]
-        profits_list = financial_stmt.tolist()
 
-        return name, profits_list
+        # 이름을 받아온다
+        sect = soup.find("h4", {"class": "h_sub sub_tit7"})
+        sect = sect.find("a").text
+
+        return name, sect
 
     except AttributeError:
         print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
               "Possible Error: It can be REITs, Transaction Suspension etc...")
         logging.warning(input_code)
-        return -1, [-1]
+        return -1, -1
 
 
-def make_all_frame(name, input_code, profit_list):
+def make_all_frame(name, input_code, sect):
     # 1줄짜리 임시 데이터프레임을 구성하여 데이터를 저장합니다.
-    temp_data = pd.DataFrame(columns=("NAME", "CODE", "2017.12", "2018.12", "2019.12", "2020.12(E)", "2019.06",
-                                      "2019.09", "2019.12", "2020.03", "2020.06", "2020.09(E)"))
+    temp_data = pd.DataFrame(columns=("NAME", "CODE", "SECT."))
 
     temp_data.loc[0, 'NAME'] = name
     temp_data.loc[0, 'CODE'] = input_code
-    temp_data.loc[0, '2017.12':"2020.09(E)"] = profit_list
+    temp_data.loc[0, 'SECT.'] = sect
 
     # 진행상황을 체크하며 값을 확인합니다.
     # print(temp_data.tail(1))
@@ -125,7 +120,7 @@ def merger(globs, code_list, in_path, out_path):
 
     if os.path.isfile(file_name):
         object_df = pd.read_csv(file_name)
-        result.loc[:, '2017.12':'2020.09(E)'] = object_df.loc[:, '2017.12':'2020.09(E)']
+        result.loc[:, 'SECT.'] = object_df.loc[:, 'SECT.']
     else:
         pass
 
@@ -184,15 +179,14 @@ def multiprocess(globs, code_list, in_path, out_path, numberOfThreads=8):
 if __name__ == '__main__':
     start_time = time.time()
 
-    measurements = pd.DataFrame(columns=("NAME", "CODE", "2017.12", "2018.12", "2019.12", "2020.12(E)", "2019.06",
-                                         "2019.09", "2019.12", "2020.03", "2020.06", "2020.09(E)"))
+    measurements = pd.DataFrame(columns=("NAME", "CODE", "SECT."))
 
     unit_all = [['KOSPI', 'noBank', 'all'],
                 ['KOSDAQ', 'noBank', 'all']]
 
     price_ks = [['KOSPI', 'noBank', 'day']]
 
-    unit_test = [['TEST', 'noBank', 'all'],
+    test = [['TEST', 'noBank', 'all'],
                  ['TEST2', 'noBank', 'all']]
 
     for a in price_ks:
@@ -200,7 +194,7 @@ if __name__ == '__main__':
         m_type = a[1]
 
         in_path = './DATA/' + market + '_' + m_type + '.csv'
-        out_path = './DATA/Results/PROFIT_' + market + '_' + m_type + datetime.today().strftime("_%Y%m%d") + '.csv'
+        out_path = './DATA/Results/SECTOR_' + market + '_' + m_type + datetime.today().strftime("_%Y%m%d") + '.csv'
 
         # 12개의 데이터프레임을 만들어줍니다. 각각의 프로세서가 사용할 데이터프레임입니다.
         manager = mp.Manager()
