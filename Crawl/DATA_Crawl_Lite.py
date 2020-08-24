@@ -45,14 +45,14 @@ def get_code_list(market, m_type, in_path):
 
 # 쓰레딩을 위해 사용하는 스타트 함수입니다.
 def starter(input_code, glob):
-    name, curPrice, prevPrice, value_tag = get_all(input_code)
+    name, curPrice, prevPrice, co_per, value_tag = get_all(input_code)
 
     # 에러상황(ETF, 리츠 등 펀드류 코드 경우)시 리턴합니다.
     if name == -1:
         logging.warning(input_code)
         return
     else:
-        temp_row = make_all_frame(name, input_code, curPrice, prevPrice, value_tag)
+        temp_row = make_all_frame(name, input_code, curPrice, prevPrice, co_per, value_tag)
         glob.df = glob.df.append(temp_row)
 
 
@@ -75,6 +75,10 @@ def get_all(input_code):
         table_tag = soup.find("table", {"class": "per_table"})
         values_raw = table_tag.find_all("em")
 
+        # 동일업종 PER을 수집합니다.
+        co_per_tag = soup.find("table", {"summary": "동일업종 PER 정보"})
+        co_per = co_per_tag.find_all("em")[0].text
+
         # 소스에서 현재가를 찾아 저장합니다. (주로 크롤링한 날 종가)
         curPrice = soup.find("p", {"class": "no_today"}).text
         curPrice = remove_coma(curPrice.split('\n')[2])
@@ -82,7 +86,7 @@ def get_all(input_code):
         prevPrice = soup.find("td", {"class": "first"}).text
         prevPrice = remove_coma(prevPrice.split('\n')[3])
 
-        return name, curPrice, prevPrice, values_raw
+        return name, curPrice, prevPrice, co_per, values_raw
 
     except AttributeError:
         print(bcolors.ERRMSG + "ERROR OCCURS\n" + bcolors.ITALIC +
@@ -91,7 +95,7 @@ def get_all(input_code):
         return -1, -1, -1, [-1]
 
 
-def make_all_frame(name, input_code, curPrice, prevPrice, values_raw):
+def make_all_frame(name, input_code, curPrice, prevPrice, co_per, values_raw):
     # 크롤링으로 받은 HTML 소스(values_raw)에서 PER, PBR 등의 값을 추출합니다.
     values = []
     for i in values_raw:
@@ -100,10 +104,12 @@ def make_all_frame(name, input_code, curPrice, prevPrice, values_raw):
             values.append('N/A')
         else:
             values.append(remove_coma(content))
+    values.insert(1, co_per)
 
     # 1줄짜리 임시 데이터프레임을 구성하여 데이터를 저장합니다.
     temp_data = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',
-                                      "PER", "EPS", "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+                                      "PER", "CO_PER", "EPS", "E_PER", "E_EPS", "PBR",
+                                      "BPS", "ITR"))
 
     temp_data.loc[0, 'NAME'] = name
     temp_data.loc[0, 'CODE'] = input_code
@@ -200,18 +206,19 @@ def multiprocess(globs, code_list, in_path, out_path, numberOfThreads=8):
 if __name__ == '__main__':
     start_time = time.time()
 
-    measurements = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR', "PER", "EPS",
-                                         "E_PER", "E_EPS", "PBR", "BPS", "ITR"))
+    measurements = pd.DataFrame(columns=("NAME", "CODE", 'CUR PRICE', 'PREV PRICE', 'FR',
+                                         "PER", "CO_PER", "EPS", "E_PER", "E_EPS", "PBR",
+                                         "BPS", "ITR"))
 
     unit_all = [['KOSPI', 'noBank', 'all'],
                 ['KOSDAQ', 'noBank', 'all']]
 
-    price_ks = [['KOSPI', 'noBank', 'day']]
+    ks = [['KOSPI', 'noBank']]
 
-    unit_test = [['TEST', 'noBank', 'all'],
+    test = [['TEST', 'noBank', 'all'],
                  ['TEST2', 'noBank', 'all']]
 
-    for a in price_ks:
+    for a in test:
         market = a[0]
         m_type = a[1]
 
